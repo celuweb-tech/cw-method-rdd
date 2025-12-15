@@ -18,27 +18,6 @@ npm install cw-method-rdd --save-dev
 npm install -g cw-method-rdd
 ```
 
-**Uso después de la instalación:**
-
-```bash
-# Si se instaló localmente o sin instalar
-npx cw-method-rdd install
-
-# Si se instaló globalmente
-cw-method-rdd install
-
-# Con tipo específico
-npx cw-method-rdd install --type=flutter
-npx cw-method-rdd install --type=frontend
-npx cw-method-rdd install --type=backend
-```
-
-**Antes de publicar, verifica:**
-- ✅ El `package.json` tiene la URL correcta del repositorio
-- ✅ El campo `files` incluye todos los archivos necesarios
-- ✅ La versión está actualizada según [Semantic Versioning](https://semver.org/)
-
-
 ## 📖 Uso
 
 ### Instalación de Reglas
