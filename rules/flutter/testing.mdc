@@ -1,0 +1,491 @@
+---
+version: 1.0.0
+description: Reglas de testing - TDD obligatorio con estructura y convenciones estrictas
+globs:
+  - "test/**/*.dart"
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Testing
+
+- SIEMPRE seguir TDD (Test-Driven Development): 🔴 RED → 🟢 GREEN → 🔵 REFACTOR
+- SIEMPRE mantener ≥85% coverage en módulos críticos
+- SIEMPRE usar formato Given-When-Then para la estructura del test
+- SIEMPRE usar Mockito con `@GenerateNiceMocks` para mocks
+- SIEMPRE usar `ProviderContainer` para testing de Riverpod providers
+- SIEMPRE seguir estructura espejo de `lib/` en `test/`
+- NUNCA escribir código sin test primero (TDD)
+- NUNCA hardcodear valores en tests sin contexto claro
+- NUNCA omitir tests para Use Cases, Repositories y Controllers
+
+## Test-Driven Development (TDD) - MANDATORY
+
+**DEBE** seguir el ciclo TDD estrictamente:
+
+```
+🔴 RED → 🟢 GREEN → 🔵 REFACTOR
+```
+
+1. **🔴 RED:** Escribir test que falle
+2. **🟢 GREEN:** Escribir código mínimo para pasar el test
+3. **🔵 REFACTOR:** Mejorar código manteniendo tests pasando
+
+```dart
+// 1. 🔴 RED - Test primero (falla)
+test('Given valid store ID, when getStoreById is called, then should return StoreEntity', () {
+  final result = repository.getStoreById('123');
+  expect(result, isA<StoreEntity>());
+});
+
+// 2. 🟢 GREEN - Implementación mínima
+class StoresRepository {
+  StoreEntity getStoreById(String id) {
+    return StoreEntity(id: id, name: '');
+  }
+}
+
+// 3. 🔵 REFACTOR - Mejorar manteniendo test pasando
+class StoresRepository {
+  final StoresDataSource _dataSource;
+  
+  StoreEntity getStoreById(String id) {
+    final model = _dataSource.getStore(id);
+    return model.toEntity();
+  }
+}
+```
+
+## Test Coverage (MANDATORY)
+
+- **DEBE** mantener ≥85% coverage en módulos críticos
+- **DEBE** ejecutar `flutter test --coverage` antes de cada commit
+- **DEBE** validar coverage con:
+  ```bash
+  lcov --summary coverage/lcov.info
+  ```
+
+## Qué DEBE Tener Tests (MANDATORY)
+
+✅ **MANDATORY Tests:**
+
+1. **Use Cases** (Domain Layer)
+   - Todos los casos de éxito
+   - Todos los casos de error
+   - Validaciones de entrada
+
+2. **Repositories** (Data Layer)
+   - Transformación Model → Entity
+   - Manejo de errores de API
+   - Casos edge (lista vacía, null, etc.)
+
+3. **Controllers** (Presentation Layer)
+   - Flujo completo de estados (loading → success → error)
+   - Actualización de estado
+   - Llamadas a use cases
+
+4. **Data Sources** (Data Layer - si tienen lógica)
+   - Solo si tienen transformaciones o lógica compleja
+   - Mocks pueden ser suficientes para data sources simples
+
+## Qué NO Debe Tener Tests
+
+❌ **NO Tests Required:**
+
+1. **Models** (freezed/json_serializable)
+   - Código autogenerado no requiere tests
+   - `freezed` garantiza immutability
+   - `json_serializable` garantiza serialización
+
+2. **Entities** (freezed)
+   - Código autogenerado
+   - Sin lógica de negocio
+
+3. **Widgets Simples**
+   - Widgets sin lógica (solo UI)
+   - Layouts estáticos
+   - Widgets que solo usan `const`
+
+4. **Main.dart**
+   - Entry point de la app
+   - Difícil de testear
+
+5. **Generated Code**
+   - `*.g.dart`, `*.freezed.dart`
+   - Autogenerado por build_runner
+
+## Test Naming Convention (MANDATORY)
+
+**DEBE** usar formato **Given-When-Then**:
+
+```dart
+test(
+  'Given valid store ID, when getStoreById is called, then should return StoreEntity',
+  () async {
+    // Given
+    const storeId = '123';
+    when(mockDataSource.getStore(storeId))
+        .thenAnswer((_) async => mockStoreModel);
+
+    // When
+    final result = await repository.getStoreById(storeId);
+
+    // Then
+    expect(result, isA<StoreEntity>());
+    expect(result.id, storeId);
+    verify(mockDataSource.getStore(storeId)).called(1);
+  },
+);
+```
+
+**Formato del nombre:**
+```
+Given [precondition], when [action], then [expected result]
+```
+
+## Test Structure (MANDATORY)
+
+```dart
+@GenerateNiceMocks([MockSpec<Dependency>()])
+void main() {
+  group('ClassName', () {
+    late ClassUnderTest sut; // System Under Test
+    late MockDependency mockDependency;
+
+    setUp(() {
+      mockDependency = MockDependency();
+      sut = ClassUnderTest(mockDependency);
+    });
+
+    test('Given [precondition], when [action], then [expected result]', () {
+      // Given - Setup
+      
+      // When - Action
+      
+      // Then - Assertions
+      
+      // Verify - Mock interactions
+    });
+  });
+}
+```
+
+## Mocking with Mockito (MANDATORY)
+
+**DEBE** usar `@GenerateNiceMocks` para crear mocks:
+
+```dart
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+import 'my_test.mocks.dart';
+
+@GenerateNiceMocks([
+  MockSpec<StoresRepository>(),
+  MockSpec<SecureStorageService>(),
+])
+void main() {
+  late MockStoresRepository mockRepository;
+
+  setUp(() {
+    mockRepository = MockStoresRepository();
+  });
+
+  test('Given empty repository, when getStores is called, then should return empty list', () {
+    // Given
+    when(mockRepository.getStores())
+        .thenAnswer((_) async => []);
+
+    // When
+    final result = await useCase();
+
+    // Then
+    verify(mockRepository.getStores()).called(1);
+    verifyNoMoreInteractions(mockRepository);
+  });
+}
+```
+
+**Después de agregar mocks, regenerar:**
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## Testing Riverpod Providers (MANDATORY)
+
+**DEBE** usar `ProviderContainer` con overrides:
+
+```dart
+void main() {
+  group('MyController', () {
+    late ProviderContainer container;
+    late MockUseCase mockUseCase;
+
+    setUp(() {
+      mockUseCase = MockUseCase();
+      
+      // ✅ Crear container raíz con overrides
+      container = ProviderContainer(
+        overrides: [
+          useCaseProvider.overrideWithValue(mockUseCase),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose(); // ✅ Siempre dispose
+    });
+
+    test('Given valid data, when loadData is called, then should update state', () async {
+      // Given
+      when(mockUseCase()).thenAnswer((_) async => data);
+
+      // When
+      final controller = container.read(myControllerProvider.notifier);
+      await controller.loadData();
+
+      // Then
+      final state = container.read(myControllerProvider);
+      expect(state.data, equals(data));
+    });
+  });
+}
+```
+
+## Widget Testing (MANDATORY)
+
+Para widgets que usan Riverpod:
+
+```dart
+testWidgets('Given stores data, when StoresPage is displayed, then should show store names', (tester) async {
+  // Given
+  when(mockUseCase()).thenAnswer((_) async => stores);
+  
+  final container = ProviderContainer(
+    overrides: [
+      useCaseProvider.overrideWithValue(mockUseCase),
+    ],
+  );
+
+  // When
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: StoresPage()),
+    ),
+  );
+  
+  await tester.pumpAndSettle();
+
+  // Then
+  expect(find.text('Store Name'), findsOneWidget);
+  
+  container.dispose();
+});
+```
+
+## Test Organization (MANDATORY)
+
+**DEBE** seguir estructura espejo de `lib/`:
+
+```
+test/
+├── features/
+│   └── stores/
+│       ├── data/
+│       │   ├── datasources/
+│       │   │   └── stores_remote_data_source_test.dart
+│       │   └── repositories/
+│       │       └── stores_repository_impl_test.dart
+│       ├── domain/
+│       │   └── usecases/
+│       │       └── get_stores_usecase_test.dart
+│       └── presentation/
+│           ├── controllers/
+│           │   └── stores_controller_test.dart
+│           └── pages/
+│               └── stores_page_test.dart
+└── core/
+    └── errors/
+        └── error_handler_test.dart
+```
+
+**Naming:** `[archivo]_test.dart` (ej: `store_model_test.dart`)
+
+## Testing Result Pattern
+
+```dart
+test('Given valid data, when getData is called, then should return Right with data', () async {
+  // Given
+  when(mockDataSource.getData())
+      .thenAnswer((_) async => mockData);
+
+  // When
+  final result = await repository.getData();
+
+  // Then
+  expect(result, isA<Right>());
+  expect(result.isSuccess, isTrue);
+  result.fold(
+    (failure) => fail('Expected Right but got Left'),
+    (data) => expect(data, equals(mockData)),
+  );
+});
+
+test('Given network error, when getData is called, then should return Left with failure', () async {
+  // Given
+  when(mockDataSource.getData())
+      .thenThrow(Exception('Network error'));
+
+  // When
+  final result = await repository.getData();
+
+  // Then
+  expect(result, isA<Left>());
+  expect(result.isFailure, isTrue);
+  result.fold(
+    (failure) => expect(failure, isA<HttpRequestFailure>()),
+    (data) => fail('Expected Left but got Right'),
+  );
+});
+```
+
+## Testing State Transitions
+
+```dart
+test('Given initial state, when loadData is called, then should transition from loading to success', () async {
+  // Given
+  when(mockUseCase()).thenAnswer((_) async => data);
+  
+  final container = ProviderContainer(
+    overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+  );
+
+  // When
+  final controller = container.read(controllerProvider.notifier);
+  
+  // Initial state
+  expect(container.read(controllerProvider).isLoading, isTrue);
+  
+  await controller.loadData();
+  
+  // Then - Final state
+  final state = container.read(controllerProvider);
+  expect(state.isLoading, isFalse);
+  expect(state.data, equals(data));
+  expect(state.error, isNull);
+  
+  container.dispose();
+});
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+test('test', () { // Nombre sin formato Given-When-Then
+  // ...
+});
+
+test('should work', () { // Nombre vago
+  // ...
+});
+
+// Crear mocks manualmente sin @GenerateNiceMocks
+class MockRepository extends Mock implements Repository {}
+
+// No usar ProviderContainer para Riverpod
+test('controller test', () {
+  final controller = MyController(); // Sin container
+});
+
+// Tests sin estructura Given-When-Then
+test('get stores', () {
+  final result = repository.getStores(); // Sin setup claro
+  expect(result, isNotNull); // Sin verificación adecuada
+});
+
+// No hacer dispose de containers
+final container = ProviderContainer();
+// ... tests ...
+// ❌ Falta container.dispose();
+
+// Hardcodear valores sin contexto
+test('test', () {
+  expect(result.id, '123'); // ¿Por qué '123'?
+});
+
+// Omitir tests para Use Cases/Repositories/Controllers
+// ❌ No crear test para GetStoresUseCase
+```
+
+## CORRECTO
+
+```dart
+// Usar formato Given-When-Then
+test('Given valid store ID, when getStoreById is called, then should return StoreEntity', () {
+  // Given
+  const storeId = '123';
+  when(mockDataSource.getStore(storeId))
+      .thenAnswer((_) async => mockStoreModel);
+
+  // When
+  final result = await repository.getStoreById(storeId);
+
+  // Then
+  expect(result, isA<StoreEntity>());
+  expect(result.id, storeId);
+  verify(mockDataSource.getStore(storeId)).called(1);
+});
+
+// Usar @GenerateNiceMocks
+@GenerateNiceMocks([MockSpec<StoresRepository>()])
+void main() {
+  late MockStoresRepository mockRepository;
+  // ...
+}
+
+// Usar ProviderContainer para Riverpod
+void main() {
+  late ProviderContainer container;
+  
+  setUp(() {
+    container = ProviderContainer(
+      overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+    );
+  });
+  
+  tearDown(() {
+    container.dispose(); // ✅ Siempre dispose
+  });
+}
+
+// Estructura clara con Given-When-Then
+test('Given empty list, when getStores is called, then should return empty list', () {
+  // Given
+  when(mockRepository.getStores()).thenAnswer((_) async => []);
+  
+  // When
+  final result = await useCase();
+  
+  // Then
+  expect(result, isEmpty);
+});
+
+// Valores con contexto claro
+test('Given store with ID 123, when getStoreById is called, then should return store with ID 123', () {
+  // Given
+  const expectedStoreId = '123';
+  final mockStore = StoreModel(id: 123, name: 'Test Store');
+  when(mockDataSource.getStore(expectedStoreId))
+      .thenAnswer((_) async => mockStore);
+  
+  // When
+  final result = await repository.getStoreById(expectedStoreId);
+  
+  // Then
+  expect(result.id, expectedStoreId);
+});
+```
+
+---

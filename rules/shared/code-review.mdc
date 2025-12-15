@@ -1,0 +1,44 @@
+---
+title: "Code Review Guidelines"
+version: "1.0.0"
+applies_to: ["all"]
+priority: "high"
+---
+
+# Code Review Guidelines - CW Method RDD
+
+## Checklist de Revisión
+
+### Funcionalidad
+- [ ] El código hace lo que dice hacer
+- [ ] Se manejan casos edge
+- [ ] Se validan inputs
+- [ ] No hay bugs obvios
+
+### Código Limpio
+- [ ] Nombres descriptivos
+- [ ] Funciones pequeñas
+- [ ] Código DRY (Don't Repeat Yourself)
+- [ ] Comentarios solo donde sea necesario
+
+### Performance
+- [ ] No hay operaciones costosas innecesarias
+- [ ] Se optimizan queries a BD
+- [ ] Se implementa paginación donde aplique
+
+### Seguridad
+- [ ] Se validan inputs del usuario
+- [ ] No se expone información sensible
+- [ ] Se usan variables de entorno
+
+### Tests
+- [ ] Hay tests unitarios
+- [ ] Tests cubren casos importantes
+- [ ] Tests son claros y mantenibles
+
+## Tono del Review
+- ✅ Constructivo y respetuoso
+- ✅ Explica el "por qué"
+- ✅ Sugiere alternativas
+- ❌ Críticas personales
+- ❌ Comentarios vagos

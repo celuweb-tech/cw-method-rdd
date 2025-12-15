@@ -1,0 +1,284 @@
+---
+version: 1.0.0
+description: Reglas de inmutabilidad - Usar Freezed para todas las clases de datos
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Inmutabilidad
+
+- SIEMPRE usar `@freezed` para todas las clases de datos (entities, models, states)
+- SIEMPRE usar `const factory` constructors
+- SIEMPRE usar `copyWith()` para actualizar objetos inmutables
+- SIEMPRE usar `@Default()` para valores por defecto en estados
+- NUNCA crear setters o propiedades mutables en clases de datos
+- NUNCA modificar colecciones directamente, siempre crear nuevas instancias
+
+## Entities (Domain Layer)
+
+SIEMPRE usar `@freezed` para entities:
+
+```dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'store_entity.freezed.dart';
+
+@freezed
+abstract class StoreEntity with _$StoreEntity {
+  const factory StoreEntity({
+    required String id,
+    required String nit,
+    required String name,
+    required String address,
+    required String phone,
+    required String city,
+    required String externalId,
+  }) = _StoreEntity;
+}
+```
+
+## Models (Data Layer)
+
+SIEMPRE usar `@freezed` con `json_serializable` para models:
+
+```dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'store_model.freezed.dart';
+part 'store_model.g.dart';
+
+@freezed
+abstract class StoreModel with _$StoreModel {
+  const StoreModel._();
+
+  const factory StoreModel({
+    required int id,
+    required String nit,
+    required String name,
+    required String address,
+    required String phone,
+    required String city,
+    required String externalId,
+  }) = _StoreModel;
+
+  /// Creates a StoreModel from JSON
+  factory StoreModel.fromJson(Map<String, dynamic> json) =>
+      _$StoreModelFromJson(json);
+
+  /// Converts StoreModel to StoreEntity
+  StoreEntity toEntity() {
+    return StoreEntity(
+      id: id.toString(),
+      nit: nit,
+      name: name,
+      address: address,
+      phone: phone,
+      city: city,
+      externalId: externalId,
+    );
+  }
+}
+```
+
+## States (Presentation Layer)
+
+SIEMPRE usar `@freezed` para estados de controllers:
+
+```dart
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'stores_state.freezed.dart';
+
+@freezed
+abstract class StoresState with _$StoresState {
+  const factory StoresState({
+    @Default(true) bool isLoading,
+    @Default(false) bool isLoadingMore,
+    @Default([]) List<StoreEntity> stores,
+    @Default([]) List<StoreEntity> filteredStores,
+    String? selectedStoreId,
+    String? error,
+    @Default(1) int currentPage,
+  }) = _StoresState;
+}
+```
+
+## Uso en Controllers
+
+```dart
+@riverpod
+class StoresController extends _$StoresController {
+  @override
+  StoresState build() => const StoresState();
+
+  void updateStores(List<StoreEntity> newStores) {
+    // ✅ CORRECTO - Crear nuevo estado con copyWith
+    state = state.copyWith(
+      isLoading: false,
+      stores: newStores,
+      error: null,
+    );
+  }
+
+  void addStore(StoreEntity store) {
+    // ✅ CORRECTO - Crear nueva lista
+    state = state.copyWith(
+      stores: [...state.stores, store],
+    );
+  }
+
+  void removeStore(String storeId) {
+    // ✅ CORRECTO - Crear nueva lista filtrada
+    state = state.copyWith(
+      stores: state.stores.where((s) => s.id != storeId).toList(),
+    );
+  }
+}
+```
+
+## Union Types (Sealed Classes)
+
+Para estados complejos usar union types:
+
+```dart
+@freezed
+abstract class HttpRequestFailure with _$HttpRequestFailure {
+  const factory HttpRequestFailure.network({
+    String? message,
+    @Default('Network error') String defaultMessage,
+  }) = _Network;
+
+  const factory HttpRequestFailure.notFound({
+    String? message,
+    @Default('Resource not found') String defaultMessage,
+  }) = _NotFound;
+
+  const factory HttpRequestFailure.server({
+    String? message,
+    @Default('Server error') String defaultMessage,
+  }) = _Server;
+}
+
+// Uso con pattern matching
+failure.when(
+  network: (message, defaultMessage) => Text(message ?? defaultMessage),
+  notFound: (message, defaultMessage) => Text(message ?? defaultMessage),
+  server: (message, defaultMessage) => Text(message ?? defaultMessage),
+);
+```
+
+## copyWith Pattern
+
+SIEMPRE usar `copyWith()` para actualizar objetos:
+
+```dart
+// Crear instancia
+final store = StoreEntity(
+  id: '1',
+  name: 'Store 1',
+  nit: '123',
+  address: 'Address 1',
+  phone: '111',
+  city: 'City 1',
+  externalId: 'ext1',
+);
+
+// ✅ CORRECTO - Actualizar con copyWith
+final updatedStore = store.copyWith(name: 'New Name');
+
+// store NO fue modificado (immutable)
+print(store.name);        // 'Store 1'
+print(updatedStore.name); // 'New Name'
+```
+
+## Valores por Defecto
+
+SIEMPRE usar `@Default()` para valores por defecto:
+
+```dart
+@freezed
+abstract class StoresState with _$StoresState {
+  const factory StoresState({
+    @Default(true) bool isLoading,        // Valor por defecto: true
+    @Default([]) List<StoreEntity> stores, // Valor por defecto: lista vacía
+    @Default(1) int currentPage,          // Valor por defecto: 1
+    String? error,                         // Nullable sin default
+  }) = _StoresState;
+}
+
+// Uso
+const state = StoresState(); // isLoading = true, stores = [], currentPage = 1
+```
+
+## Colecciones Inmutables
+
+SIEMPRE crear nuevas listas, nunca modificar existentes:
+
+```dart
+// ✅ CORRECTO - Crear nueva lista
+state = state.copyWith(
+  stores: [...state.stores, newStore],
+);
+
+// ✅ CORRECTO - Filtrar creando nueva lista
+state = state.copyWith(
+  stores: state.stores.where((s) => s.id != storeId).toList(),
+);
+
+// ✅ CORRECTO - Usar List.unmodifiable si es necesario
+final immutableList = List.unmodifiable(stores);
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+class StoreEntity {
+  String name; // Propiedad mutable
+  void setName(String name) { this.name = name; } // Setter
+}
+
+class StoresState {
+  List<StoreEntity> stores = []; // Lista mutable
+  void addStore(StoreEntity store) {
+    stores.add(store); // Modificar lista directamente
+  }
+}
+
+// Modificar objeto directamente
+store.name = 'New Name'; // NO COMPILA con freezed
+
+// Modificar lista directamente
+state.stores.add(newStore); // NO COMPILA con freezed
+```
+
+## CORRECTO
+
+```dart
+// Usar @freezed para entities
+@freezed
+abstract class StoreEntity with _$StoreEntity {
+  const factory StoreEntity({
+    required String name,
+  }) = _StoreEntity;
+}
+
+// Usar @freezed para states
+@freezed
+abstract class StoresState with _$StoresState {
+  const factory StoresState({
+    @Default([]) List<StoreEntity> stores,
+  }) = _StoresState;
+}
+
+// Actualizar con copyWith
+final updatedStore = store.copyWith(name: 'New Name');
+
+// Crear nueva lista
+state = state.copyWith(
+  stores: [...state.stores, newStore],
+);
+```
+
+---

@@ -1,0 +1,281 @@
+---
+version: 1.0.0
+description: Seguridad - Secure storage, tokens, autenticación, prevención SQL injection
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Seguridad
+
+- SIEMPRE usar `flutter_secure_storage` para tokens, credenciales, IDs sensibles
+- SIEMPRE usar `SecureStorageService` wrapper (no FlutterSecureStorage directamente)
+- SIEMPRE centralizar keys en `StorageKeys` class
+- SIEMPRE usar `AuthInterceptor` para inyectar tokens automáticamente
+- SIEMPRE limpiar tokens en logout/expiración de sesión
+- SIEMPRE usar parámetros preparados para queries SQL (prevenir SQL injection)
+- SIEMPRE validar y sanitizar inputs antes de insertar en base de datos
+- SIEMPRE usar variables de entorno (`.env` con `envied`) para URLs, API keys y datos sensibles
+- NUNCA usar `shared_preferences` para datos sensibles
+- NUNCA exponer tokens, passwords o datos sensibles en logs
+- NUNCA hardcodear tokens, URLs, API keys o credenciales en código
+- NUNCA concatenar strings directamente en queries SQL
+
+## Secure Storage (MANDATORY)
+
+**DEBE** usar `flutter_secure_storage` para datos sensibles:
+
+```dart
+// Configuración en providers
+@Riverpod(keepAlive: true)
+FlutterSecureStorage secureStorage(Ref ref) {
+  return const FlutterSecureStorage(
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
+}
+
+// Usar SecureStorageService wrapper
+final storageService = ref.read(secureStorageServiceProvider);
+await storageService.write(StorageKeys.accessToken, token);
+```
+
+**Configuración:** iOS Keychain (`first_unlock_this_device`), Android KeyStore
+
+## Storage Keys (MANDATORY)
+
+**DEBE** centralizar keys en `lib/core/storage/storage_keys.dart`:
+
+```dart
+class StorageKeys {
+  StorageKeys._();
+  static const String accessToken = 'access_token';
+  static const String refreshToken = 'refresh_token';
+}
+
+// Uso
+await storageService.write(StorageKeys.accessToken, token);
+```
+
+## Tokens y Autenticación (MANDATORY)
+
+**DEBE** usar `AuthInterceptor` para inyectar tokens automáticamente:
+
+```dart
+// AuthInterceptor ya configurado en DioClient
+// Limpiar tokens en logout
+Future<void> logout() async {
+  await authLocalDataSource.clearAuthData();
+  await storageService.deleteAll();
+}
+```
+
+**NUNCA** exponer tokens en logs:
+
+```dart
+// ❌ INCORRECTO
+debugPrint('Token: $token');
+
+// ✅ CORRECTO
+debugPrint('Token: ***');
+```
+
+## Variables de Entorno (MANDATORY)
+
+**DEBE** usar variables de entorno para URLs, API keys y datos sensibles:
+
+```dart
+// Configuración con envied en lib/core/env/env.dart
+@Envied(path: '.env')
+abstract class Env {
+  @EnviedField(varName: 'API_BASE_URL')
+  static const String apiBaseUrl = _Env.apiBaseUrl;
+  
+  @EnviedField(varName: 'API_KEY')
+  static const String apiKey = _Env.apiKey;
+}
+
+// Uso en código
+final baseUrl = Env.apiBaseUrl;
+final apiKey = Env.apiKey;
+final dio = Dio(BaseOptions(baseUrl: Env.apiBaseUrl));
+```
+
+**NUNCA** hardcodear URLs, API keys o datos sensibles:
+
+```dart
+// ❌ INCORRECTO - Hardcoded
+const String baseUrl = 'https://api.example.com';
+const String apiKey = 'sk_live_1234567890';
+final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+
+// ✅ CORRECTO - Desde variables de entorno
+final baseUrl = Env.apiBaseUrl;
+final apiKey = Env.apiKey;
+final dio = Dio(BaseOptions(baseUrl: Env.apiBaseUrl));
+```
+
+## Seguridad de Bases de Datos Locales (MANDATORY)
+
+### Prevención SQL Injection
+
+**DEBE** usar parámetros preparados (prepared statements):
+
+```dart
+// ❌ INCORRECTO - Vulnerable a SQL injection
+final query = 'SELECT * FROM users WHERE id = $userId';
+final result = await db.rawQuery(query);
+
+// ✅ CORRECTO - Parámetros preparados con SQLite
+final query = 'SELECT * FROM users WHERE id = ?';
+final result = await db.rawQuery(query, [userId]);
+
+// ✅ CORRECTO - Con Drift (type-safe, previene SQL injection automáticamente)
+Future<User?> getUserById(int id) {
+  return (select(users)..where((u) => u.id.equals(id))).getSingleOrNull();
+}
+
+// ✅ CORRECTO - Insert con parámetros
+await db.insert('users', {'id': userId, 'name': userName});
+```
+
+### Validación de Inputs
+
+**DEBE** validar y sanitizar inputs antes de insertar:
+
+```dart
+// ✅ CORRECTO - Validar tipo y rango
+Future<void> saveUser(int userId, String userName) async {
+  if (userId <= 0) throw ArgumentError('Invalid user ID');
+  if (userName.isEmpty || userName.length > 100) {
+    throw ArgumentError('Invalid user name');
+  }
+  
+  final sanitizedName = userName.trim();
+  await db.insert('users', {'id': userId, 'name': sanitizedName});
+}
+```
+
+### Uso de ORM/Query Builders
+
+**DEBE** preferir ORM o query builders type-safe:
+
+```dart
+// ✅ CORRECTO - Con Drift (recomendado)
+@DriftDatabase(tables: [Users])
+class AppDatabase extends _$AppDatabase {
+  Future<User?> getUserById(int id) {
+    return (select(users)..where((u) => u.id.equals(id))).getSingleOrNull();
+  }
+}
+
+// ✅ CORRECTO - Con SQLite usando parámetros
+Future<List<Map<String, dynamic>>> getUsersByStore(String storeId) async {
+  return await db.query('users', where: 'store_id = ?', whereArgs: [storeId]);
+}
+```
+
+### Transacciones para Operaciones Críticas
+
+**DEBE** usar transacciones para operaciones críticas:
+
+```dart
+// ✅ CORRECTO - Transacción para operaciones múltiples
+Future<void> transferData(int fromId, int toId) async {
+  await db.transaction((txn) async {
+    await txn.delete('users', where: 'id = ?', whereArgs: [fromId]);
+    await txn.update('users', {'id': toId}, where: 'id = ?', whereArgs: [toId]);
+  });
+}
+```
+
+## Logging y Datos Sensibles (MANDATORY)
+
+**NUNCA** loguear datos sensibles:
+
+```dart
+// ❌ INCORRECTO
+debugPrint('Access token: $token');
+debugPrint('Password: $password');
+
+// ✅ CORRECTO
+debugPrint('Token: ***');
+debugPrint('User ID: ${user.id}'); // Solo IDs no sensibles
+```
+
+## Limpieza de Datos (MANDATORY)
+
+**DEBE** limpiar datos sensibles en logout/expiración:
+
+```dart
+// ✅ CORRECTO - Limpiar en logout
+Future<void> logout() async {
+  await authLocalDataSource.clearAuthData();
+  await storageService.deleteAll();
+}
+
+// ✅ CORRECTO - Limpiar cuando token expira
+if (tokenExpired) {
+  await storageService.delete(StorageKeys.accessToken);
+  await storageService.delete(StorageKeys.refreshToken);
+}
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Usar shared_preferences para datos sensibles
+SharedPreferences prefs = await SharedPreferences.getInstance();
+await prefs.setString('access_token', token); // ❌
+
+// ❌ Hardcodear tokens, URLs, API keys o credenciales
+const String apiKey = 'sk_live_1234567890'; // ❌
+const String baseUrl = 'https://api.example.com'; // ❌
+final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com')); // ❌
+
+// ❌ Exponer tokens en logs
+debugPrint('Token: $token'); // ❌
+
+// ❌ Concatenar strings en queries SQL
+final query = 'SELECT * FROM users WHERE id = $userId'; // ❌
+
+// ❌ No validar inputs antes de insertar
+await db.insert('users', {'id': userId}); // ❌ Sin validar userId
+
+// ❌ No usar parámetros preparados
+final result = await db.rawQuery('SELECT * FROM users WHERE id = $userId'); // ❌
+```
+
+## CORRECTO
+
+```dart
+// ✅ Usar flutter_secure_storage
+await storageService.write(StorageKeys.accessToken, token);
+
+// ✅ Usar variables de entorno para URLs, API keys y credenciales
+final apiKey = Env.apiKey; // ✅ Desde envied
+final baseUrl = Env.apiBaseUrl; // ✅ Desde envied
+final dio = Dio(BaseOptions(baseUrl: Env.apiBaseUrl)); // ✅ Desde envied
+
+// ✅ Usar placeholders en logs
+debugPrint('Token: ***'); // ✅
+
+// ✅ Usar parámetros preparados
+final query = 'SELECT * FROM users WHERE id = ?';
+await db.rawQuery(query, [userId]); // ✅
+
+// ✅ Validar inputs antes de insertar
+if (userId <= 0) throw ArgumentError('Invalid ID');
+await db.insert('users', {'id': userId}); // ✅
+
+// ✅ Usar ORM type-safe (Drift)
+Future<User?> getUserById(int id) {
+  return (select(users)..where((u) => u.id.equals(id))).getSingleOrNull();
+}
+
+// ✅ Limpiar datos en logout
+await storageService.deleteAll(); // ✅
+```
+
+---

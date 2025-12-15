@@ -1,0 +1,7 @@
+examples/
+docs/
+scripts/
+*.test.js
+.github/
+.gitignore
+*.sh

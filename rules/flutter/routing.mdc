@@ -1,0 +1,165 @@
+---
+version: 1.0.0
+description: Reglas de routing - Usar GoRouter con rutas centralizadas en páginas
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Routing
+
+- SIEMPRE usar GoRouter como único sistema de navegación
+- SIEMPRE definir rutas en cada página con `routePath` y `routeName` estáticos
+- SIEMPRE usar `context.go()` o `context.push()` para navegar
+- NUNCA usar Navigator 1.0 o rutas nombradas antiguas
+- NUNCA hardcodear paths de rutas directamente
+
+## Definición de Rutas en Páginas
+
+Cada página DEBE definir sus rutas como constantes estáticas:
+
+```dart
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  /// Navigation route
+  static const String routePath = '/home';
+  static const String routeName = 'home';
+
+  @override
+  Widget build(BuildContext context) {
+    // ...
+  }
+}
+```
+
+## Configuración del Router
+
+El router DEBE estar centralizado en `lib/core/router/app_router.dart` usando Riverpod:
+
+```dart
+@riverpod
+GoRouter goRouter(Ref ref) {
+  return GoRouter(
+    initialLocation: SplashPage.routePath,
+    routes: [
+      GoRoute(
+        path: HomePage.routePath,
+        name: HomePage.routeName,
+        builder: (context, state) => const HomePage(),
+      ),
+      // Más rutas...
+    ],
+    redirect: (context, state) {
+      // Lógica de redirección basada en autenticación
+      final authState = ref.read(authControllerProvider);
+      // ...
+      return null;
+    },
+  );
+}
+```
+
+## Navegación
+
+### Navegación Simple (Reemplazar ruta)
+
+```dart
+// CORRECTO - Usar routePath de la página
+context.go(HomePage.routePath);
+context.go(StoresPage.routePath);
+```
+
+### Navegación con Stack (Push)
+
+```dart
+// CORRECTO - Para navegación con stack
+context.push(StoresPage.routePath);
+```
+
+### Regresar
+
+```dart
+// CORRECTO - Regresar a ruta anterior
+context.pop();
+
+// Regresar con resultado
+context.pop(selectedItem);
+```
+
+## Rutas Anidadas (Shell Routes)
+
+Para bottom navigation usar `StatefulShellRoute.indexedStack`:
+
+```dart
+StatefulShellRoute.indexedStack(
+  builder: (context, state, navigationShell) {
+    return MainShellPage(navigationShell: navigationShell);
+  },
+  branches: [
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: HomePage.routePath,
+          name: HomePage.routeName,
+          pageBuilder: (context, state) => NoTransitionPage(
+            key: state.pageKey,
+            child: const HomePage(),
+          ),
+        ),
+      ],
+    ),
+    // Más branches...
+  ],
+)
+```
+
+## Route Guards (Redirect)
+
+Usar `redirect` callback para proteger rutas:
+
+```dart
+redirect: (context, state) {
+  final authState = ref.read(authControllerProvider);
+  final isLoginRoute = state.matchedLocation == AuthPage.routePath;
+
+  // Si está autenticado y va a login → Redirigir
+  if (authState.isAuthenticated && isLoginRoute) {
+    return StoresPage.routePath;
+  }
+
+  // Si no está autenticado → Redirigir a login
+  if (!authState.isAuthenticated && !isLoginRoute) {
+    return AuthPage.routePath;
+  }
+
+  return null; // No redirect
+}
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => HomePage()),
+);
+
+Navigator.pushNamed(context, '/home');
+
+context.go('/home'); // Hardcoded path
+
+context.go('stores'); // Path sin usar routePath de la página
+```
+
+## CORRECTO
+
+```dart
+// Usar routePath de la página
+context.go(HomePage.routePath);
+context.push(StoresPage.routePath);
+context.pop();
+```
+
+---

@@ -1,0 +1,196 @@
+---
+version: 1.0.0
+description: Estilos de texto y tipografía - Usar TextStyles.dynamicTextStyle con Responsive
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Sistema de Tipografía y Estilos de Texto
+
+- SIEMPRE usar `TextStyles.dynamicTextStyle()` para estilos de texto
+- SIEMPRE usar `responsive.fp()` para tamaños de fuente (nunca hardcodear fontSize)
+- SIEMPRE usar `Fonts.poppins`, `Fonts.urbanist`, o `Fonts.sfProDisplay` para fontFamily
+- NUNCA crear `TextStyle` directamente en widgets
+- NUNCA hardcodear valores de fontSize, fontWeight, o fontFamily
+
+## Tipografías del Sistema
+
+Las tipografías están definidas en `lib/core/constants/fonts.dart`:
+
+- **Poppins** (`Fonts.poppins`) - Para títulos y encabezados
+- **Urbanist** (`Fonts.urbanist`) - Para cuerpo de texto
+- **SF Pro Display** (`Fonts.sfProDisplay`) - Para elementos especiales (botones, detalles)
+
+## TextStyles System (MANDATORY)
+
+Todos los estilos de texto deben usar `TextStyles.dynamicTextStyle()`:
+
+```dart
+// lib/shared/styles/text_styles.dart
+class TextStyles {
+  static TextStyle dynamicTextStyle({
+    Color? color,
+    bool isBold = false,
+    FontWeight? fontWeight,
+    bool isUnderLine = false,
+    bool hasThroughLine = false,
+    double? lineSpacing = 1,
+    bool isItalic = false,
+    double fontSize = 100,
+    required String fontFamily,
+  }) {
+    return TextStyle(
+      height: lineSpacing,
+      decoration: isUnderLine
+          ? TextDecoration.combine([
+              TextDecoration.underline,
+              hasThroughLine ? TextDecoration.lineThrough : TextDecoration.none,
+            ])
+          : (hasThroughLine ? TextDecoration.lineThrough : TextDecoration.none),
+      decorationColor: color,
+      color: color ?? Colors.black,
+      fontWeight: fontWeight ?? (isBold ? FontWeight.bold : FontWeight.normal),
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+    );
+  }
+}
+```
+
+## Uso en Código
+
+```dart
+import 'package:b2b/shared/styles/text_styles.dart';
+import 'package:b2b/shared/utils/responsive.dart';
+import 'package:b2b/core/constants/fonts.dart';
+import 'package:b2b/shared/colors/colors.dart';
+
+// Obtener instancia de Responsive
+final responsive = Responsive.of(context);
+
+// CORRECTO - Título con Poppins
+Text(
+  'Título Principal',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.poppins,
+    fontSize: responsive.fp(27),
+    isBold: true,
+    color: MyColors.textPrimary,
+  ),
+)
+
+// CORRECTO - Cuerpo de texto con Urbanist
+Text(
+  'Cuerpo de texto',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.urbanist,
+    fontSize: responsive.fp(16),
+    color: MyColors.textPrimary,
+  ),
+)
+
+// CORRECTO - Botón con SF Pro Display
+Text(
+  'Botón',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.sfProDisplay,
+    fontSize: responsive.fp(16),
+    fontWeight: FontWeight.w600,
+    color: MyColors.textWhite,
+  ),
+)
+
+// CORRECTO - Con fontWeight personalizado
+Text(
+  'Texto SemiBold',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.poppins,
+    fontSize: responsive.fp(18),
+    fontWeight: FontWeight.w600, // SemiBold
+    color: MyColors.textPrimary,
+  ),
+)
+
+// CORRECTO - Con lineSpacing
+Text(
+  'Texto con espaciado',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.urbanist,
+    fontSize: responsive.fp(14),
+    lineSpacing: 1.5,
+    color: MyColors.textSecondary,
+  ),
+)
+```
+
+## Font Size Responsive
+
+SIEMPRE usar `responsive.fp()` para tamaños de fuente. Este método calcula el tamaño basado en la diagonal del dispositivo:
+
+```dart
+final responsive = Responsive.of(context);
+
+// Para mobile/tablet
+fontSize: responsive.fp(27)  // Tamaño de diseño: 27px
+
+// Para web (si es necesario)
+fontSize: responsive.fpw(27) // Tamaño de diseño web: 27px
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+Text(
+  'Título',
+  style: TextStyle(
+    fontSize: 24, // Hardcoded - debe usar responsive.fp()
+    fontWeight: FontWeight.bold,
+  ),
+)
+
+Text(
+  'Texto',
+  style: TextStyle(
+    fontFamily: 'Arial', // Tipografía no definida - usar Fonts.poppins, etc.
+    fontSize: 16, // Hardcoded
+  ),
+)
+
+Text(
+  'Texto',
+  style: TextStyles.dynamicTextStyle(
+    fontSize: 16, // Hardcoded - debe usar responsive.fp(16)
+    fontFamily: 'Roboto', // No usar directamente - usar Fonts.urbanist
+  ),
+)
+```
+
+## CORRECTO
+
+```dart
+final responsive = Responsive.of(context);
+
+Text(
+  'Título',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.poppins,
+    fontSize: responsive.fp(24), // Usar responsive.fp()
+    isBold: true,
+    color: MyColors.textPrimary,
+  ),
+)
+
+Text(
+  'Texto',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.urbanist,
+    fontSize: responsive.fp(16), // Usar responsive.fp()
+    color: MyColors.textPrimary,
+  ),
+)
+```
+
+---

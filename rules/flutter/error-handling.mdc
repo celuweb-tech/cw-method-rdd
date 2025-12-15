@@ -1,0 +1,286 @@
+---
+version: 1.0.0
+description: Manejo de errores - Either/Result pattern, HttpRequestFailure, ErrorHandler
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Manejo de Errores
+
+- SIEMPRE usar `Either<Failure, Success>` o `FutureResult<T>` para manejo de errores
+- SIEMPRE usar `HttpRequestFailure` con freezed para tipos de errores
+- SIEMPRE usar `ErrorHandler` para mapear excepciones a `HttpRequestFailure`
+- SIEMPRE usar `ResultFactory` para crear Either fácilmente
+- SIEMPRE usar `fold()` para manejar Either en controllers
+- SIEMPRE capturar errores en Repository layer con try/catch
+- NUNCA lanzar excepciones sin convertir a `HttpRequestFailure`
+- NUNCA manejar errores directamente en Use Cases (solo pasar Either)
+- NUNCA exponer excepciones técnicas al usuario (usar mensajes user-friendly)
+
+## Either Monad / Result Pattern (MANDATORY)
+
+**DEBE** usar `Either<Failure, Success>` para manejo de errores:
+
+```dart
+typedef FutureResult<T> = Future<Either<HttpRequestFailure, T>>;
+
+FutureResult<List<StoreEntity>> getStores() async {
+  try {
+    final stores = await _dataSource.getStores();
+    return Right(stores);
+  } catch (e) {
+    return Left(ErrorHandler.handleError(e));
+  }
+}
+```
+
+## HttpRequestFailure (MANDATORY)
+
+**DEBE** usar `HttpRequestFailure` con freezed para errores:
+
+```dart
+@freezed
+class HttpRequestFailure with _$HttpRequestFailure {
+  const factory HttpRequestFailure.network({
+    @Default('Network error occurred') String message,
+  }) = _NetworkFailure;
+
+  const factory HttpRequestFailure.server({
+    @Default('Server error occurred') String message,
+    int? statusCode,
+  }) = _ServerFailure;
+
+  const factory HttpRequestFailure.badRequest({
+    @Default('Bad request') String message,
+    int? statusCode,
+  }) = _BadRequestFailure;
+
+  const factory HttpRequestFailure.unauthorized({
+    @Default('Unauthorized') String message,
+  }) = _UnauthorizedFailure;
+
+  const factory HttpRequestFailure.notFound({
+    @Default('Resource not found') String message,
+  }) = _NotFoundFailure;
+
+  const factory HttpRequestFailure.validation({
+    @Default('Validation error') String message,
+  }) = _ValidationFailure;
+
+  const factory HttpRequestFailure.unexpected({
+    @Default('Unexpected error occurred') String message,
+  }) = _UnexpectedFailure;
+}
+```
+
+## ErrorHandler (MANDATORY)
+
+**DEBE** usar `ErrorHandler` para mapear excepciones:
+
+```dart
+class ErrorHandler {
+  ErrorHandler._();
+
+  static HttpRequestFailure handleError(dynamic error) {
+    if (error is DioException) {
+      return _handleDioException(error);
+    }
+    
+    if (error is HttpRequestFailure) {
+      return error;
+    }
+    
+    return HttpRequestFailure.unexpected(message: error.toString());
+  }
+
+  static HttpRequestFailure _handleDioException(DioException error) {
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return const HttpRequestFailure.network(message: 'Connection timeout');
+
+      case DioExceptionType.badResponse:
+        return _handleHttpError(error.response?.statusCode);
+
+      case DioExceptionType.connectionError:
+      case DioExceptionType.unknown:
+      default:
+        return const HttpRequestFailure.network(message: 'No internet connection');
+    }
+  }
+
+  static HttpRequestFailure _handleHttpError(int? statusCode) {
+    if (statusCode == null) {
+      return const HttpRequestFailure.unexpected();
+    }
+
+    switch (statusCode) {
+      case 400:
+        return HttpRequestFailure.badRequest(statusCode: statusCode);
+      case 401:
+        return const HttpRequestFailure.unauthorized();
+      case 404:
+        return const HttpRequestFailure.notFound();
+      case 422:
+        return const HttpRequestFailure.validation();
+      case >= 500:
+        return HttpRequestFailure.server(statusCode: statusCode);
+      default:
+        return HttpRequestFailure.unexpected(message: 'HTTP Error $statusCode');
+    }
+  }
+
+  static String getErrorMessage(HttpRequestFailure failure) {
+    return failure.when(
+      network: (message) => 'Sin conexión a internet',
+      server: (message, statusCode) => 'Error del servidor. Intenta más tarde.',
+      badRequest: (message, statusCode) => message,
+      unauthorized: (message) => 'Sesión expirada. Inicia sesión nuevamente.',
+      notFound: (message) => 'Recurso no encontrado',
+      validation: (message) => message,
+      unexpected: (message) => 'Error inesperado. Intenta nuevamente.',
+    );
+  }
+}
+```
+
+
+## Error Handling en Cada Capa
+
+### Data Layer (Repository)
+```dart
+FutureResult<List<StoreEntity>> getStores() async {
+  try {
+    final models = await _remoteDataSource.getStores();
+    return Right(models.map((m) => m.toEntity()).toList());
+  } catch (e) {
+    return Left(ErrorHandler.handleError(e));
+  }
+}
+```
+
+### Domain Layer (Use Case)
+```dart
+FutureResult<List<StoreEntity>> call() {
+  return _repository.getStores();
+}
+```
+
+### Presentation Layer (Controller)
+```dart
+result.fold(
+  (failure) {
+    state = state.copyWith(
+      isLoading: false,
+      error: ErrorHandler.getErrorMessage(failure),
+    );
+  },
+  (stores) {
+    state = state.copyWith(isLoading: false, stores: stores);
+  },
+);
+```
+
+### UI Layer (Widget)
+```dart
+if (state.error != null) {
+  return ErrorWidget(
+    message: state.error!,
+    onRetry: () => ref.read(storesControllerProvider.notifier).loadStores(),
+  );
+}
+```
+
+
+## ResultFactory Helper (MANDATORY)
+
+```dart
+class ResultFactory {
+  ResultFactory._();
+
+  static Either<HttpRequestFailure, T> success<T>(T data) {
+    return Right(data);
+  }
+
+  static Either<HttpRequestFailure, T> failure<T>(HttpRequestFailure failure) {
+    return Left(failure);
+  }
+}
+
+// Uso
+return ResultFactory.success(stores);
+return ResultFactory.failure(HttpRequestFailure.network());
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Lanzar excepciones sin convertir
+Future<List<StoreEntity>> getStores() async {
+  final stores = await _dataSource.getStores(); // ❌ Puede lanzar excepción
+  return stores;
+}
+
+// ❌ Manejar errores en Use Case
+class GetStoresUseCase {
+  FutureResult<List<StoreEntity>> call() {
+    try {
+      return await _repository.getStores();
+    } catch (e) { // ❌ No manejar aquí
+      return Left(ErrorHandler.handleError(e));
+    }
+  }
+}
+
+// ❌ Exponer excepciones técnicas al usuario
+result.fold(
+  (failure) {
+    state = state.copyWith(
+      error: failure.toString(), // ❌ Mensaje técnico
+    );
+  },
+  (data) { },
+);
+
+```
+
+## CORRECTO
+
+```dart
+// ✅ Capturar y convertir errores en Repository
+FutureResult<List<StoreEntity>> getStores() async {
+  try {
+    final models = await _remoteDataSource.getStores();
+    return Right(models.map((m) => m.toEntity()).toList());
+  } catch (e) {
+    return Left(ErrorHandler.handleError(e));
+  }
+}
+
+// ✅ Use Case solo pasa Either
+class GetStoresUseCase {
+  FutureResult<List<StoreEntity>> call() {
+    return _repository.getStores(); // ✅ Solo pasa el Either
+  }
+}
+
+// ✅ Usar fold para manejar Either
+result.fold(
+  (failure) {
+    state = state.copyWith(
+      error: ErrorHandler.getErrorMessage(failure), // ✅ Mensaje user-friendly
+    );
+  },
+  (stores) {
+    state = state.copyWith(stores: stores);
+  },
+);
+
+// ✅ Usar ResultFactory
+return ResultFactory.success(stores);
+return ResultFactory.failure(HttpRequestFailure.network());
+```
+
+---

@@ -1,0 +1,54 @@
+---
+title: "Error Handling Backend"
+version: "1.0.0"
+applies_to: ["backend"]
+priority: "critical"
+---
+
+# Manejo de Errores - Backend
+
+## Reglas
+
+Usar clase AppError estandarizada:
+
+```javascript
+const { AppError, ErrorCodes } = require('cw-method-rdd');
+
+throw new AppError(
+  ErrorCodes.AUTH.INVALID,
+  'Credenciales inválidas',
+  error.message
+);
+```
+
+## Middleware de Errores
+
+```javascript
+app.use((err, req, res, next) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json(err.toJSON());
+  }
+  
+  // Error no manejado
+  console.error(err);
+  res.status(500).json({
+    error: {
+      code: 'ERR_SYS_INTERNAL',
+      message: 'Error interno del servidor'
+    }
+  });
+});
+```
+
+## Formato Estándar
+
+```json
+{
+  "error": {
+    "code": "ERR_AUTH_INVALID",
+    "message": "Credenciales inválidas",
+    "timestamp": "2024-12-11T10:30:00Z",
+    "trace_id": "uuid-v4"
+  }
+}
+```

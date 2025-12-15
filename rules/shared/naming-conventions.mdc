@@ -1,0 +1,38 @@
+---
+title: "Naming Conventions"
+version: "1.0.0"
+applies_to: ["all"]
+priority: "high"
+---
+
+# Convenciones de Nomenclatura
+
+## Variables
+- **camelCase**: `userName`, `isActive`, `hasPermission`
+
+## Funciones
+- **Verbos en camelCase**: `getUserData()`, `validateEmail()`, `formatDate()`
+
+## Constantes
+- **UPPER_SNAKE_CASE**: `MAX_RETRIES`, `API_URL`, `DEFAULT_TIMEOUT`
+
+## Clases/Componentes
+- **PascalCase**: `UserProfile`, `LoginForm`, `DataTable`
+
+## Archivos
+- **kebab-case**: `user-profile.ts`, `login-form.tsx`, `data-table.vue`
+
+## Booleanos
+Usar prefijos: `is`, `has`, `can`, `should`
+
+```typescript
+// ✅ Correcto
+const isLoggedIn = true;
+const hasPermission = false;
+const canEdit = true;
+
+// ❌ Incorrecto
+const loggedIn = true;
+const permission = false;
+const edit = true;
+```

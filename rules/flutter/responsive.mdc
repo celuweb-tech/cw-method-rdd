@@ -1,0 +1,283 @@
+---
+version: 1.0.0
+description: Diseño responsive - Usar Responsive.of(context) con métodos dp, fp, wp, hp
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Sistema de Diseño Responsive
+
+- SIEMPRE usar `Responsive.of(context)` para obtener instancia responsive
+- SIEMPRE usar métodos responsive: `dp()`, `fp()`, `wp()`, `hp()` para valores adaptativos
+- SIEMPRE usar `SafeArea` en páginas
+- NUNCA hardcodear valores de padding, margin, fontSize, o dimensiones directamente
+- NUNCA usar `MediaQuery.of(context).size.width` directamente para breakpoints
+
+## Responsive Class (MANDATORY)
+
+La clase `Responsive` se instancia con `Responsive.of(context)` y proporciona métodos para valores adaptativos:
+
+```dart
+// lib/shared/utils/responsive.dart
+class Responsive {
+  static Responsive of(BuildContext context) => Responsive(context);
+
+  // Propiedades disponibles
+  double get width;
+  double get height;
+  double get diagonal;
+  bool get isTablet;      // shortestSide >= 600
+  bool get isDesktop;       // width > resolution (1046)
+  bool get isLandscape;
+
+  // Métodos para valores adaptativos
+  double dp(double percent) => _diagonal * percent / 100;  // Diagonal percentage
+  double fp(int designFontSize) => designFontSize * _scaleFactor;  // Font size responsive
+  double fpw(int designFontSize) => designFontSize * _webScaleFactor;  // Font size web
+  double wp(double percent) => _width * percent / 100;  // Width percentage
+  double hp(double percent) => _height * percent / 100;  // Height percentage
+}
+```
+
+## Uso en Código
+
+### Obtener Instancia Responsive
+
+```dart
+import 'package:b2b/shared/utils/responsive.dart';
+
+@override
+Widget build(BuildContext context) {
+  final responsive = Responsive.of(context);
+  
+  // Usar métodos responsive
+  return Container(
+    padding: EdgeInsets.all(responsive.dp(4)),
+    child: Text(
+      'Texto',
+      style: TextStyle(fontSize: responsive.fp(16)),
+    ),
+  );
+}
+```
+
+### Padding y Spacing Responsive
+
+```dart
+final responsive = Responsive.of(context);
+
+// CORRECTO - Padding usando dp (diagonal percentage)
+Padding(
+  padding: EdgeInsets.symmetric(horizontal: responsive.dp(4)),
+  child: child,
+)
+
+SizedBox(height: responsive.dp(8))
+
+EdgeInsets.all(responsive.dp(2))
+```
+
+### Font Size Responsive
+
+```dart
+final responsive = Responsive.of(context);
+
+// CORRECTO - Font size usando fp (font size responsive)
+Text(
+  'Título',
+  style: TextStyles.dynamicTextStyle(
+    fontSize: responsive.fp(27), // Tamaño de diseño: 27px
+    fontFamily: Fonts.poppins,
+  ),
+)
+
+// Para web (si es necesario)
+Text(
+  'Texto Web',
+  style: TextStyles.dynamicTextStyle(
+    fontSize: responsive.fpw(16), // Font size web responsive
+    fontFamily: Fonts.urbanist,
+  ),
+)
+```
+
+### Width y Height Responsive
+
+```dart
+final responsive = Responsive.of(context);
+
+// CORRECTO - Width usando wp (width percentage)
+Container(
+  width: responsive.wp(80), // 80% del ancho de pantalla
+  child: child,
+)
+
+// CORRECTO - Height usando hp (height percentage)
+Container(
+  height: responsive.hp(50), // 50% del alto de pantalla
+  child: child,
+)
+
+// CORRECTO - Dimensiones usando dp (diagonal percentage)
+Image.asset(
+  'image.png',
+  width: responsive.dp(30),
+  height: responsive.dp(10),
+)
+```
+
+### Detección de Tipo de Pantalla
+
+```dart
+final responsive = Responsive.of(context);
+
+// CORRECTO - Usar propiedades de la instancia
+if (responsive.isTablet) {
+  // Código para tablet
+}
+
+if (responsive.isDesktop) {
+  // Código para desktop
+}
+
+if (responsive.isLandscape) {
+  // Código para landscape
+}
+
+// Acceder a dimensiones
+final screenWidth = responsive.width;
+final screenHeight = responsive.height;
+final screenDiagonal = responsive.diagonal;
+```
+
+### Safe Area
+
+```dart
+// SIEMPRE usar SafeArea en páginas
+Scaffold(
+  body: SafeArea(
+    child: PageContent(),
+  ),
+)
+
+// O con EdgeInsets.only para control granular
+Padding(
+  padding: EdgeInsets.only(
+    top: MediaQuery.of(context).padding.top,
+    bottom: MediaQuery.of(context).padding.bottom,
+  ),
+  child: PageContent(),
+)
+```
+
+## Ejemplo Completo
+
+```dart
+@override
+Widget build(BuildContext context) {
+  final responsive = Responsive.of(context);
+  final strings = AppLocalizations.of(context);
+
+  return Scaffold(
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: responsive.dp(4)),
+        child: Column(
+          children: [
+            SizedBox(height: responsive.dp(8)),
+            Image.asset(
+              'logo.png',
+              width: responsive.dp(30),
+              height: responsive.dp(10),
+            ),
+            SizedBox(height: responsive.dp(10)),
+            Text(
+              strings.title,
+              style: TextStyles.dynamicTextStyle(
+                fontFamily: Fonts.poppins,
+                fontSize: responsive.fp(27),
+                isBold: true,
+                color: MyColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: responsive.dp(2)),
+            Text(
+              strings.subtitle,
+              style: TextStyles.dynamicTextStyle(
+                fontFamily: Fonts.urbanist,
+                fontSize: responsive.fp(16),
+                color: MyColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+Padding(
+  padding: EdgeInsets.all(16.0), // Hardcoded - usar responsive.dp()
+)
+
+Text(
+  'Texto',
+  style: TextStyle(
+    fontSize: 24, // Hardcoded - usar responsive.fp()
+  ),
+)
+
+Container(
+  width: 200, // Hardcoded - usar responsive.wp() o responsive.dp()
+  height: 100, // Hardcoded - usar responsive.hp() o responsive.dp()
+)
+
+if (MediaQuery.of(context).size.width < 600) { // Hardcoded breakpoint
+  // Usar responsive.isTablet en su lugar
+}
+
+SizedBox(height: 20) // Hardcoded - usar responsive.dp()
+```
+
+## CORRECTO
+
+```dart
+final responsive = Responsive.of(context);
+
+Padding(
+  padding: EdgeInsets.all(responsive.dp(4)), // Usar responsive.dp()
+)
+
+Text(
+  'Texto',
+  style: TextStyles.dynamicTextStyle(
+    fontSize: responsive.fp(24), // Usar responsive.fp()
+    fontFamily: Fonts.poppins,
+  ),
+)
+
+Container(
+  width: responsive.wp(80), // Usar responsive.wp()
+  height: responsive.hp(50), // Usar responsive.hp()
+)
+
+if (responsive.isTablet) { // Usar propiedad responsive
+  // ...
+}
+
+SizedBox(height: responsive.dp(5)) // Usar responsive.dp()
+
+Scaffold(
+  body: SafeArea( // Siempre usar SafeArea
+    child: PageContent(),
+  ),
+)
+```
+
+---

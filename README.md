@@ -1,0 +1,155 @@
+# CW Method RDD (Rules Driven Development)
+
+Sistema de especificaciones y reglas de desarrollo con soporte para agentes IA (Cursor, Windsurf, etc.)
+
+## 🚀 Instalación
+
+### Instalación desde npm (cuando esté publicado)
+
+```bash
+npm install cw-method-rdd --save-dev
+```
+
+### Prueba Local (Antes de Publicar)
+
+Si quieres probar el paquete localmente antes de publicarlo en npm, consulta [PRUEBA_LOCAL.md](./PRUEBA_LOCAL.md) para instrucciones detalladas.
+
+**Método rápido con npm link:**
+
+```bash
+# 1. En el proyecto cw-method-rdd
+cd cw-method-rdd
+npm link
+
+# 2. En tu proyecto de prueba
+cd tu-proyecto
+npm link cw-method-rdd
+
+# 3. Probar
+npx cw-method-rdd install
+
+# 4. Desvincular cuando termines
+npm unlink cw-method-rdd
+```
+
+O usa el script de prueba automático:
+
+```bash
+./scripts/test-local.sh [ruta-al-proyecto-prueba]
+```
+
+## 📖 Uso
+
+### Instalación de Reglas
+
+```bash
+# Instalación interactiva
+npx cw-method-rdd install
+
+# Instalación con tipo específico
+npx cw-method-rdd install --type=frontend
+npx cw-method-rdd install --type=backend
+npx cw-method-rdd install --type=flutter
+```
+
+### Configuración
+
+Crea un archivo `.cw-rdd.json` en la raíz de tu proyecto:
+
+```json
+{
+  "projectType": "frontend",
+  "version": "1.0.0",
+  "rules": {
+    "frontend": true,
+    "shared": true
+  }
+}
+```
+
+O agrega en tu `package.json`:
+
+```json
+{
+  "name": "mi-proyecto",
+  "cw-rdd": {
+    "projectType": "backend"
+  }
+}
+```
+
+## 📂 Estructura Resultante
+
+Después de la instalación:
+
+```
+tu-proyecto/
+├── .cursor/
+│   ├── rules/
+│   │   ├── architecture.mdc
+│   │   ├── cleancode.mdc
+│   │   ├── colors.mdc
+│   │   ├── documentation.mdc
+│   │   ├── icons.mdc
+│   │   ├── internationalization.mdc
+│   │   ├── solid.mdc
+│   │   ├── states-management.mdc
+│   │   └── test.mdc
+│   ├── commands/
+│   │   ├── developer.md
+│   │   ├── prompt-engineer.md
+│   │   └── scrum.md
+│   └── hooks.json
+└── .cw-rdd.json
+```
+
+## 🎯 Tipos de Proyecto Soportados
+
+- **frontend**: React, Vue, Angular, Next.js, Nuxt
+- **backend**: Node.js, Express, NestJS, Fastify
+- **flutter**: Aplicaciones móviles con Flutter/Dart
+
+## 🔍 Detección Automática
+
+El sistema detecta automáticamente el tipo de proyecto según:
+
+1. Archivo `.cw-rdd.json`
+2. Campo `cw-rdd` en `package.json`
+3. Dependencias instaladas
+4. Archivo `pubspec.yaml` (Flutter)
+5. Estructura de carpetas
+6. Prompt interactivo (fallback)
+
+## 🛠️ Comandos Disponibles
+
+```bash
+# Instalar reglas
+npx cw-method-rdd install
+
+# Instalar tipo específico
+npx cw-method-rdd install --type=frontend
+
+# Listar reglas disponibles
+npx cw-method-rdd list
+
+# Validar reglas instaladas
+npx cw-method-rdd validate
+
+# Ver versión
+npx cw-method-rdd --version
+
+# Ayuda
+npx cw-method-rdd --help
+```
+
+## 📚 Documentación
+
+Ver carpeta `/docs` para documentación completa.
+
+## 🤝 Contribuir
+
+Las contribuciones son bienvenidas. Por favor revisa las guías de contribución.
+
+## 📝 Licencia
+
+MIT

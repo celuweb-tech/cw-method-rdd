@@ -1,0 +1,293 @@
+---
+version: 1.0.0
+description: Sistema de botones - Usar CustomButton con ButtonVariant
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Sistema de Botones
+
+- SIEMPRE usar `CustomButton` para todos los botones
+- SIEMPRE usar `ButtonVariant` para definir el tipo de botón
+- SIEMPRE usar textos localizados con `AppLocalizations` (nunca hardcodear textos)
+- SIEMPRE usar `MyColors` para colores (nunca hardcodear valores de color)
+- SIEMPRE usar `responsive.dp()` para dimensiones y espaciados
+- **IMPORTANTE**: `onPressed` DEBE ser `Future<void> Function()` (async)
+- NUNCA crear botones directamente con `ElevatedButton`, `OutlinedButton`, o `TextButton`
+- NUNCA hardcodear textos en botones
+
+## Button Variants (MANDATORY)
+
+```dart
+enum ButtonVariant {
+  primary,      // Acción principal (más importante)
+  secondary,    // Acción secundaria (importancia media)
+  destructive,  // Acción destructiva (negativa, menor peso visual)
+  text,         // Acción terciaria (mínima importancia)
+}
+```
+
+## CustomButton Widget (MANDATORY)
+
+Todos los botones deben usar `CustomButton` de `lib/shared/widgets/custom_button.dart`:
+
+```dart
+import 'package:b2b/shared/widgets/custom_button.dart';
+
+// Obtener localización
+final strings = AppLocalizations.of(context);
+
+// CORRECTO - Botón primario
+CustomButton(
+  onPressed: () async {
+    await _handleSave();
+  },
+  text: strings.save, // Usar localización
+  variant: ButtonVariant.primary,
+)
+```
+
+### Parámetros Principales
+
+- **`onPressed`** (`Future<void> Function()`): **REQUERIDO** - Callback async
+- **`text`** (`String`): **REQUERIDO** - Texto localizado
+- **`variant`** (`ButtonVariant`): Opcional, por defecto `primary`
+- **`width`** (`double?`): Por defecto `responsive.dp(100)` (full width)
+- **`height`** (`double?`): Por defecto según variante (ver tabla resumen)
+- **`enabled`** (`bool`): Por defecto `true`
+- **`maxFontSize`** (`double?`): Por defecto `responsive.fp(16)`
+- **`borderRadius`** (`BorderRadius?`): Por defecto `BorderRadius.circular(responsive.dp(1.5))`
+
+## Uso de Variantes
+
+### Primary Button (Acción Principal)
+
+Usar para la acción principal de la pantalla (solo una por pantalla):
+
+```dart
+CustomButton(
+  onPressed: () async {
+    await _handleSave();
+  },
+  text: strings.save,
+  variant: ButtonVariant.primary,
+  width: responsive.dp(100), // Full width con responsive
+)
+```
+
+**Características:** `ElevatedButton`, background `MyColors.buttonPrimary`, texto `MyColors.textWhite`, altura `responsive.dp(5.6)`
+
+### Secondary Button (Acción Secundaria)
+
+```dart
+CustomButton(
+  onPressed: () async {
+    await _handleCancel();
+  },
+  text: strings.cancel,
+  variant: ButtonVariant.secondary,
+)
+```
+
+**Características:** `OutlinedButton`, background `MyColors.buttonSecondary`, texto `MyColors.buttonPrimary`, borde `MyColors.buttonBorder`, altura `responsive.dp(5.6)`
+
+### Destructive Button (Acción Destructiva)
+
+Usar con confirmación:
+
+```dart
+CustomButton(
+  onPressed: () async {
+    final confirmed = await _showDeleteConfirmation();
+    if (confirmed) await _delete();
+  },
+  text: strings.delete,
+  variant: ButtonVariant.destructive,
+)
+```
+
+**Características:** `OutlinedButton`, background `MyColors.buttonSecondary`, texto `MyColors.buttonDestructive`, altura `responsive.dp(4.8)` (menor peso visual)
+
+### Text Button (Acción Terciaria)
+
+```dart
+CustomButton(
+  onPressed: () async {
+    await _handleSkip();
+  },
+  text: strings.skip,
+  variant: ButtonVariant.text,
+)
+```
+
+**Características:** `TextButton`, background transparente, texto `MyColors.buttonText`, altura `responsive.dp(4.8)`
+
+## Estados del Botón
+
+### Loading State (Automático)
+
+El botón maneja automáticamente el estado de carga:
+
+```dart
+CustomButton(
+  onPressed: () async {
+    await Future.delayed(Duration(seconds: 2)); // Simula carga
+    // Muestra CircularProgressIndicator automáticamente
+    // Bloquea múltiples taps automáticamente
+  },
+  text: strings.saving,
+  variant: ButtonVariant.primary,
+)
+```
+
+### Disabled State
+
+```dart
+CustomButton(
+  onPressed: () async {},
+  text: strings.continueText,
+  variant: ButtonVariant.primary,
+  enabled: isFormValid, // Controlar con estado
+)
+```
+
+**Colores disabled:** Background `MyColors.textSecondary`, Foreground `MyColors.secondaryColor`
+
+## Dimensiones y Estilos
+
+SIEMPRE usar `responsive.dp()` para dimensiones:
+
+```dart
+final responsive = Responsive.of(context);
+
+// Full width (por defecto)
+CustomButton(
+  onPressed: () async {},
+  text: strings.save,
+  variant: ButtonVariant.primary,
+  // width no especificado → usa responsive.dp(100) por defecto
+)
+
+// Ancho personalizado
+CustomButton(
+  onPressed: () async {},
+  text: strings.cancel,
+  variant: ButtonVariant.secondary,
+  width: responsive.dp(50), // 50% del ancho
+)
+
+// Border radius personalizado
+CustomButton(
+  onPressed: () async {},
+  text: strings.save,
+  variant: ButtonVariant.primary,
+  borderRadius: BorderRadius.circular(responsive.dp(2)), // Usar responsive
+)
+```
+
+**Valores por defecto:**
+- Width: `responsive.dp(100)` (full width)
+- Height: `responsive.dp(5.6)` para primary/secondary, `responsive.dp(4.8)` para destructive/text
+- Border Radius: `BorderRadius.circular(responsive.dp(1.5))`
+- Font Size: `responsive.fp(16)` (siempre `Fonts.poppins`, `bold`, max 2 líneas)
+
+## Espaciado entre Botones
+
+```dart
+// Horizontal
+Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+    CustomButton(onPressed: () async {}, text: strings.cancel, variant: ButtonVariant.text),
+    SizedBox(width: responsive.dp(3)), // Espaciado responsive
+    CustomButton(onPressed: () async {}, text: strings.confirm, variant: ButtonVariant.primary),
+  ],
+)
+
+// Vertical
+Column(
+  crossAxisAlignment: CrossAxisAlignment.stretch,
+  children: [
+    CustomButton(onPressed: () async {}, text: strings.option1, variant: ButtonVariant.primary, width: responsive.dp(100)),
+    SizedBox(height: responsive.dp(3)), // Espaciado responsive
+    CustomButton(onPressed: () async {}, text: strings.option2, variant: ButtonVariant.secondary, width: responsive.dp(100)),
+  ],
+)
+```
+
+## Jerarquía de Botones
+
+1. **PRIMARY** → Acción principal (1 por pantalla): "Guardar", "Confirmar"
+2. **SECONDARY** → Acción alternativa importante: "Cancelar", "Ver Detalles"
+3. **TEXT** → Acción terciaria: "Omitir", "Descartar"
+4. **DESTRUCTIVE** → Acción destructiva (con confirmación): "Eliminar"
+
+## PROHIBIDO
+
+```dart
+//  No usar widgets de Material directamente
+ElevatedButton(onPressed: () {}, child: Text('Guardar'))
+OutlinedButton(onPressed: () {}, child: Text('Cancelar'))
+TextButton(onPressed: () {}, child: Text('Omitir'))
+
+//  Texto hardcodeado
+CustomButton(onPressed: () async {}, text: 'Guardar', variant: ButtonVariant.primary)
+
+//  Valores hardcodeados sin responsive o sin MyColors
+CustomButton(
+  onPressed: () async {},
+  text: strings.save,
+  variant: ButtonVariant.primary,
+  backgroundColor: Color(0xFF4A90E2)
+  width: 200, // Debe usar responsive.dp(50)
+  height: 50, // Debe usar responsive.dp(5.6)
+  borderRadius: BorderRadius.circular(12), // Debe usar responsive.dp(1.5)
+)
+
+//  onPressed no es async
+CustomButton(onPressed: () {}, text: strings.save, variant: ButtonVariant.primary)
+
+
+## CORRECTO
+
+```dart
+final responsive = Responsive.of(context);
+final strings = AppLocalizations.of(context);
+
+//  Botón primario
+CustomButton(
+  onPressed: () async => await _handleSave(),
+  text: strings.save,
+  variant: ButtonVariant.primary,
+  width: responsive.dp(100),
+)
+
+//  Botón secundario
+CustomButton(
+  onPressed: () async => await _handleCancel(),
+  text: strings.cancel,
+  variant: ButtonVariant.secondary,
+)
+
+//  Botón destructivo con confirmación
+CustomButton(
+  onPressed: () async {
+    final confirmed = await _showDeleteConfirmation();
+    if (confirmed) await _delete();
+  },
+  text: strings.delete,
+  variant: ButtonVariant.destructive,
+)
+
+//  Estado deshabilitado
+CustomButton(
+  onPressed: () async => await _submit(),
+  text: strings.submit,
+  variant: ButtonVariant.primary,
+  enabled: isFormValid,
+  width: responsive.dp(100),
+)
+```
+
+---

@@ -1,0 +1,293 @@
+---
+version: 1.0.0
+description: State Management - Riverpod, providers, widgets, performance
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# State Management
+
+- SIEMPRE usar Riverpod para todo el state management
+- SIEMPRE usar anotación `@riverpod` para code generation
+- SIEMPRE usar `AsyncNotifier` para operaciones asíncronas
+- SIEMPRE envolver la app con `ProviderScope` en `main.dart`
+- SIEMPRE colocar providers en `features/*/presentation/controllers/`
+- SIEMPRE usar `ConsumerWidget` cuando solo lea estado del provider
+- SIEMPRE usar `ConsumerStatefulWidget` cuando el widget necesite estado local Y estado del provider
+- SIEMPRE usar `StatefulWidget` cuando solo se necesite estado local (más eficiente)
+- SIEMPRE priorizar rendimiento y minimizar rebuilds innecesarios
+- NUNCA usar Provider, BLoC, o cualquier otra solución de state management
+- NUNCA crear providers en `lib/core/` (excepto utilidades core)
+- NUNCA usar `StatefulWidget` sin consumer cuando necesite estado del provider
+
+## Riverpod ONLY (MANDATORY)
+
+**DEBE** usar Riverpod para todo el state management:
+
+```dart
+// En main.dart
+void main() {
+  runApp(
+    ProviderScope(
+      child: const MyApp(),
+    ),
+  );
+}
+```
+
+## Provider Types (MANDATORY)
+
+**DEBE** usar anotación `@riverpod` para code generation:
+
+```dart
+// Controller con AsyncNotifier para operaciones asíncronas
+@riverpod
+class StoresController extends _$StoresController {
+  @override
+  Future<StoresState> build() async {
+    return const StoresState(isLoading: true);
+  }
+
+  Future<void> loadStores() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _getStoresUseCase());
+  }
+}
+
+// Provider final cuando sea posible
+@riverpod
+String appVersion(AppVersionRef ref) {
+  return '1.0.0';
+}
+```
+
+## Provider Location (MANDATORY)
+
+**DEBE** colocar providers en `features/*/presentation/controllers/`:
+
+```
+lib/features/stores/presentation/controllers/
+├── stores_controller.dart
+├── stores_state.dart
+└── providers.dart
+```
+
+## Widget Types con Riverpod (MANDATORY)
+
+### ConsumerWidget (Solo leer estado)
+
+```dart
+class StoresPage extends ConsumerWidget {
+  const StoresPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(storesControllerProvider);
+    return Scaffold(/* ... */);
+  }
+}
+```
+
+### ConsumerStatefulWidget (Estado local + Provider)
+
+```dart
+class LoginForm extends ConsumerStatefulWidget {
+  const LoginForm({super.key});
+
+  @override
+  ConsumerState<LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends ConsumerState<LoginForm> {
+  final _formKey = GlobalKey<FormState>();
+  
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    return Form(key: _formKey, /* ... */);
+  }
+}
+```
+
+### StatefulWidget (Solo estado local - MÁS EFICIENTE)
+
+```dart
+class CustomButton extends StatefulWidget {
+  const CustomButton({super.key});
+  
+  @override
+  State<CustomButton> createState() => _CustomButtonState();
+}
+
+class _CustomButtonState extends State<CustomButton> {
+  bool _isLoading = false;
+  
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        setState(() => _isLoading = true);
+      },
+      child: _isLoading ? const CircularProgressIndicator() : const Text('Submit'),
+    );
+  }
+}
+```
+
+## Performance Optimization Rules (MANDATORY)
+
+### Elección de State Management
+
+**Estado Local (setState):**
+- Para estado simple, local del widget (bool, int, String)
+- Más eficiente (sin overhead de provider)
+- Rebuilds más rápidos
+
+**Riverpod providers:**
+- Para estado compartido o lógica de negocio compleja
+- Estado que necesita ser accedido por múltiples widgets
+- Estado que necesita persistencia o caché
+
+### Optimización de Rebuilds
+
+```dart
+// ✅ Extraer widgets complejos
+Widget _buildHeader() {
+  return Column(/* ... */);
+}
+
+// ✅ Usar RepaintBoundary
+RepaintBoundary(
+  child: CustomButton(/* ... */),
+)
+
+// ✅ Verificar mounted antes de setState en async
+Future<void> _handleAsync() async {
+  await someOperation();
+  if (mounted) {
+    setState(() { /* ... */ });
+  }
+}
+
+// ✅ Usar const cuando sea posible
+const SizedBox(height: 20),
+const Text('Hello'),
+```
+
+## Riverpod Testing (MANDATORY)
+
+**DEBE** usar `ProviderContainer` + `UncontrolledProviderScope` para testing:
+
+```dart
+void main() {
+  group('AuthPage', () {
+    late MockLoginUseCase mockLoginUseCase;
+    late ProviderContainer container;
+
+    setUp(() {
+      mockLoginUseCase = MockLoginUseCase();
+      container = ProviderContainer(
+        overrides: [
+          loginUseCaseProvider.overrideWithValue(mockLoginUseCase),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    Widget createTestWidget() {
+      return UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: AuthPage()),
+      );
+    }
+
+    testWidgets('should display login button', (tester) async {
+      await tester.pumpWidget(createTestWidget());
+      expect(find.text('Login'), findsOneWidget);
+    });
+  });
+}
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Usar Provider, BLoC u otra solución
+class MyController extends ChangeNotifier { }
+
+// ❌ Crear providers en lib/core/
+// lib/core/providers/my_provider.dart ❌
+
+// ❌ StatefulWidget sin Consumer cuando necesita provider
+class LoginPage extends StatefulWidget {
+  // No puede acceder a ref.watch() aquí
+}
+
+// ❌ Usar ProviderScope directamente en tests con @riverpod
+Widget createTestWidget() {
+  return ProviderScope(
+    overrides: [
+      loginUseCaseProvider.overrideWithValue(mockLoginUseCase),
+    ],
+    child: const MaterialApp(home: AuthPage()),
+  );
+}
+
+// ❌ Falta const causa rebuilds innecesarios
+SizedBox(height: 20), // Se recrea en cada build
+Text('Hello'), // Se recrea en cada build
+```
+
+## CORRECTO
+
+```dart
+// ✅ Usar Riverpod con @riverpod
+@riverpod
+class StoresController extends _$StoresController {
+  @override
+  Future<StoresState> build() async {
+    return const StoresState(isLoading: true);
+  }
+}
+
+// ✅ Colocar providers en features/*/presentation/controllers/
+// lib/features/stores/presentation/controllers/stores_controller.dart ✅
+
+// ✅ ConsumerWidget para leer estado
+class StoresPage extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(storesControllerProvider);
+    return Scaffold(/* ... */);
+  }
+}
+
+// ✅ StatefulWidget para estado local simple
+class CustomButton extends StatefulWidget {
+  @override
+  State<CustomButton> createState() => _CustomButtonState();
+}
+
+// ✅ Usar ProviderContainer + UncontrolledProviderScope en tests
+container = ProviderContainer(
+  overrides: [
+    loginUseCaseProvider.overrideWithValue(mockLoginUseCase),
+  ],
+);
+
+return UncontrolledProviderScope(
+  container: container,
+  child: const MaterialApp(home: AuthPage()),
+);
+
+// ✅ Usar const cuando sea posible
+const SizedBox(height: 20),
+const Text('Hello'),
+const Icon(Icons.add),
+```
+
+---

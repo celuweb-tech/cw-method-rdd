@@ -1,0 +1,294 @@
+---
+version: 1.0.0
+description: Principios SOLID - Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Principios SOLID
+
+- SIEMPRE aplicar Single Responsibility Principle (SRP) - Una clase una responsabilidad
+- SIEMPRE aplicar Open/Closed Principle (OCP) - Abierto para extensión, cerrado para modificación
+- SIEMPRE aplicar Liskov Substitution Principle (LSP) - Subtipos sustituibles por tipos base
+- SIEMPRE aplicar Interface Segregation Principle (ISP) - Interfaces específicas, no generales
+- SIEMPRE aplicar Dependency Inversion Principle (DIP) - Depender de abstracciones, no concreciones
+- NUNCA crear clases con múltiples responsabilidades
+- NUNCA modificar código existente para agregar funcionalidad (usar extensión)
+- NUNCA violar contratos de interfaces al implementarlas
+
+## Single Responsibility Principle (SRP)
+
+**Una clase debe tener una sola razón para cambiar.**
+
+```dart
+// ❌ PROHIBIDO - Múltiples responsabilidades
+class UserService {
+  Future<User> getUser(String id) async { /* ... */ }
+  String formatUserName(User user) { /* ... */ }
+  void sendEmail(User user, String message) { /* ... */ }
+  void logUserAction(User user, String action) { /* ... */ }
+}
+
+// ✅ CORRECTO - Responsabilidades separadas
+class UserRepository {
+  Future<User> getUser(String id) async { /* ... */ }
+}
+
+class EmailService {
+  Future<void> send(User user, String message) async { /* ... */ }
+}
+
+class Logger {
+  void log(String message) { /* ... */ }
+}
+```
+
+## Open/Closed Principle (OCP)
+
+**Abierto para extensión, cerrado para modificación.**
+
+```dart
+// ❌ PROHIBIDO - Modificar código existente
+class PaymentProcessor {
+  void process(String type, double amount) {
+    if (type == 'credit_card') { /* ... */ }
+    else if (type == 'paypal') { /* ... */ }
+    // ❌ Agregar nuevo método requiere modificar esta clase
+  }
+}
+
+// ✅ CORRECTO - Extensión sin modificación
+abstract class PaymentMethod {
+  Future<void> process(double amount);
+}
+
+class CreditCardPayment implements PaymentMethod {
+  @override
+  Future<void> process(double amount) async { /* ... */ }
+}
+
+class PayPalPayment implements PaymentMethod {
+  @override
+  Future<void> process(double amount) async { /* ... */ }
+}
+
+// ✅ Agregar nuevo método NO requiere modificar código existente
+class BitcoinPayment implements PaymentMethod {
+  @override
+  Future<void> process(double amount) async { /* ... */ }
+}
+```
+
+## Liskov Substitution Principle (LSP)
+
+**Las clases derivadas deben ser sustituibles por sus clases base.**
+
+```dart
+// ❌ PROHIBIDO - Violación de contrato
+abstract class Bird {
+  void fly();
+}
+
+class Penguin implements Bird {
+  @override
+  void fly() {
+    throw UnimplementedError('Penguins cannot fly'); // ❌ Rompe el contrato
+  }
+}
+
+// ✅ CORRECTO - Contratos respetados
+abstract class Bird {
+  void move();
+}
+
+class Sparrow implements Bird {
+  @override
+  void move() { /* vuela */ }
+}
+
+class Penguin implements Bird {
+  @override
+  void move() { /* nada */ } // ✅ Cumple el contrato
+}
+```
+
+## Interface Segregation Principle (ISP)
+
+**Los clientes no deben depender de interfaces que no usan.**
+
+```dart
+// ❌ PROHIBIDO - Interface grande con métodos no usados
+abstract class DataRepository {
+  Future<void> save(Data data);
+  Future<Data> load(String id);
+  Future<void> delete(String id);
+  Future<void> backup();
+  Future<void> restore();
+}
+
+// Cliente solo necesita lectura
+class DataViewer implements DataRepository {
+  @override
+  Future<Data> load(String id) async { /* ... */ }
+  
+  // ❌ Obligado a implementar métodos que no usa
+  @override
+  Future<void> save(Data data) async => throw UnimplementedError();
+  @override
+  Future<void> delete(String id) async => throw UnimplementedError();
+}
+
+// ✅ CORRECTO - Interfaces pequeñas y específicas
+abstract class ReadRepository {
+  Future<Data> load(String id);
+}
+
+abstract class WriteRepository {
+  Future<void> save(Data data);
+  Future<void> delete(String id);
+}
+
+// Cliente solo implementa lo que necesita
+class DataViewer implements ReadRepository {
+  @override
+  Future<Data> load(String id) async { /* ... */ }
+}
+
+class DataEditor implements ReadRepository, WriteRepository {
+  @override
+  Future<Data> load(String id) async { /* ... */ }
+  
+  @override
+  Future<void> save(Data data) async { /* ... */ }
+  
+  @override
+  Future<void> delete(String id) async { /* ... */ }
+}
+```
+
+## Dependency Inversion Principle (DIP)
+
+**Depender de abstracciones, no de concreciones.**
+
+```dart
+// ❌ PROHIBIDO - Dependencia de implementación concreta
+class GetUserUseCase {
+  final UserRepositoryImpl _repository; // ❌ Concreción
+  GetUserUseCase(this._repository);
+  Future<User> call(String id) => _repository.getUser(id);
+}
+
+// ✅ CORRECTO - Dependencia de abstracción
+abstract class UserRepository {
+  Future<User> getUser(String id);
+}
+
+class GetUserUseCase {
+  final UserRepository _repository; // ✅ Abstracción
+  GetUserUseCase(this._repository);
+  Future<User> call(String id) => _repository.getUser(id);
+}
+
+// ✅ CORRECTO - Dependency Injection con Riverpod
+@riverpod
+UserRepository userRepository(Ref ref) {
+  final remoteDataSource = ref.watch(userRemoteDataSourceProvider);
+  return UserRepositoryImpl(remoteDataSource);
+}
+
+@riverpod
+GetUserUseCase getUserUseCase(Ref ref) {
+  final repository = ref.watch(userRepositoryProvider);
+  return GetUserUseCase(repository); // ✅ Depende de abstracción
+}
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ SRP - Múltiples responsabilidades
+class UserManager {
+  void saveUser(User user) { }
+  void sendEmail(User user) { }
+  void validateUser(User user) { }
+}
+
+// ❌ OCP - Modificar código existente
+class PaymentProcessor {
+  void process(String type) {
+    if (type == 'credit') { }
+    else if (type == 'paypal') { } // Nueva funcionalidad requiere modificación
+  }
+}
+
+// ❌ LSP - Violar contrato
+abstract class Repository {
+  List<Entity> getAll();
+}
+class MockRepository implements Repository {
+  @override
+  List<Entity> getAll() {
+    throw Exception(); // ❌ Rompe el contrato
+  }
+}
+
+// ❌ ISP - Interface grande
+abstract class UserOperations {
+  void create();
+  void update();
+  void delete();
+  void sendEmail(); // No todos lo necesitan
+}
+
+// ❌ DIP - Depender de implementación
+class UseCase {
+  final ConcreteRepository _repository; // ❌ Depende de concreción
+}
+```
+
+## CORRECTO
+
+```dart
+// ✅ SRP - Una responsabilidad por clase
+class UserRepository {
+  Future<void> saveUser(User user) { }
+}
+
+class EmailService {
+  Future<void> sendEmail(User user) { }
+}
+
+// ✅ OCP - Extensión sin modificación
+abstract class PaymentProcessor {
+  Future<void> process(double amount);
+}
+class CreditCardProcessor implements PaymentProcessor { }
+class PayPalProcessor implements PaymentProcessor { } // Nueva sin modificar existente
+
+// ✅ LSP - Contratos respetados
+abstract class Repository {
+  FutureResult<List<Entity>> getAll();
+}
+class MockRepository implements Repository {
+  @override
+  FutureResult<List<Entity>> getAll() => Right([]); // ✅ Cumple contrato
+}
+
+// ✅ ISP - Interfaces específicas
+abstract class UserRepository {
+  Future<void> create();
+  Future<void> update();
+}
+abstract class EmailService {
+  Future<void> sendEmail(User user);
+}
+
+// ✅ DIP - Depender de abstracción
+class UseCase {
+  final Repository _repository; // ✅ Depende de interfaz
+  UseCase(this._repository);
+}
+```
+
+---

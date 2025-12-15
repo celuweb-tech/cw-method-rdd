@@ -1,0 +1,142 @@
+---
+version: 1.0.0
+description: Reglas de Git - Formato de commits, validaciones previas y buenas prácticas
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Reglas de Git
+
+- SIEMPRE usar formato Conventional Commits: `<type>: <message>`
+- SIEMPRE vincular commits con tareas usando `Task: #<número>`
+- SIEMPRE validar código antes de commit: `dart format`, `dart analyze`, `dart run custom_lint`
+- SIEMPRE hacer `git push` inmediatamente después del commit para sincronizar con Azure DevOps
+- SIEMPRE usar mensajes descriptivos y concisos (≤ 72 caracteres recomendado)
+- NUNCA hacer commit sin validar formato y análisis estático
+- NUNCA hacer commit sin vincular con tarea (excepto WIP)
+- NUNCA omitir el push después del commit
+
+## Formato de Commits
+
+**Estructura obligatoria**:
+```
+<type>: <message>
+Task: #<task-number>
+```
+
+**Tipos permitidos**:
+- `feat`: Nueva funcionalidad visible para el usuario
+- `fix`: Corrección de errores
+- `hotfix`: Corrección urgente en producción
+- `refactor`: Refactorización sin cambio de comportamiento
+- `docs`: Cambios solo en documentación
+- `test`: Agregar o refactorizar pruebas
+- `style`: Formato, espacios, punto y coma (sin cambio de código)
+- `perf`: Mejoras de rendimiento
+- `build`: Cambios en sistema de build o dependencias
+- `ci`: Configuración de CI o scripts
+- `chore`: Otros cambios que no modifican src o test
+
+**Ejemplos**:
+```bash
+# ✅ CORRECTO
+git commit -m "feat: Agregar búsqueda de tiendas por nombre" -m "Task: #76431"
+git commit -m "fix: Corregir persistencia de sesión en Android" -m "Task: #76413"
+git commit -m "docs: Actualizar reglas de Azure DevOps" -m "Task: #76433"
+
+# ❌ INCORRECTO
+git commit -m "Cambios varios"  # Sin tipo ni tarea
+git commit -m "feat: Implementar funcionalidad completa de búsqueda de tiendas por nombre y código con filtros avanzados"  # Muy largo
+```
+
+**Flujo completo**:
+```bash
+
+# 1. Agregar archivos
+git add .
+
+# 2. Commit con formato correcto
+git commit -m "feat: Nueva funcionalidad" -m "Task: #76431"
+
+# 3. Push inmediato (OBLIGATORIO)
+git push origin <branch-name>
+```
+
+## Vinculación con Azure DevOps
+
+**Formato**: `Task: #<número>` o `Task: WIP` para trabajo en progreso
+
+**IMPORTANTE**: La vinculación solo ocurre después del `git push`. Los commits locales no son detectados por Azure DevOps.
+
+```bash
+# ✅ CORRECTO - Con tarea
+git commit -m "feat: Implementar autenticación" -m "Task: #74080"
+git push origin <branch-name>
+
+# ✅ CORRECTO - WIP (sin tarea asignada)
+git commit -m "feat: Trabajo en progreso" -m "Task: WIP"
+git push origin <branch-name>
+
+# ❌ INCORRECTO - Sin push (no se vincula)
+git commit -m "feat: Nueva funcionalidad" -m "Task: #76431"
+# Falta: git push
+```
+
+## Mensajes de Commit
+
+**Reglas**:
+- Mensaje principal ≤ 72 caracteres (recomendado)
+- Descriptivo: describe QUÉ se hizo, no CÓMO
+- Usar caracteres especiales directamente (á, é, í, ó, ú, ñ) - Git maneja UTF-8
+
+**Ejemplos**:
+```bash
+# ✅ CORRECTO - Conciso y descriptivo
+git commit -m "feat: Agregar búsqueda de tiendas" -m "Task: #76431"
+git commit -m "fix: Corregir navegación en configuración" -m "Task: #76413"
+
+# ❌ INCORRECTO - Muy largo o vago
+git commit -m "feat: Implementar funcionalidad completa de búsqueda de tiendas por nombre y código con filtros avanzados y validaciones" -m "Task: #76431"
+git commit -m "fix: Arreglos varios" -m "Task: #76431"
+```
+
+## Commits Atómicos
+
+**Regla**: Cada commit debe representar un cambio lógico y completo.
+
+```bash
+# ✅ CORRECTO - Un cambio por commit
+git commit -m "feat: Agregar campo de búsqueda" -m "Task: #76431"
+git commit -m "feat: Implementar lógica de filtrado" -m "Task: #76432"
+git commit -m "test: Agregar tests de búsqueda" -m "Task: #76433"
+
+# ❌ INCORRECTO - Múltiples cambios no relacionados
+git commit -m "feat: Agregar búsqueda y corregir login y actualizar dependencias" -m "Task: #76431"
+```
+
+## PROHIBIDO
+
+```bash
+# ❌ Commit sin validaciones previas
+git commit -m "feat: Nueva funcionalidad" -m "Task: #76431"
+
+# ❌ Commit sin formato correcto
+git commit -m "Cambios varios"
+git commit -m "update code"
+
+# ❌ Commit sin vincular tarea (excepto WIP)
+git commit -m "feat: Nueva funcionalidad"
+
+# ❌ Mensaje muy largo
+git commit -m "feat: Implementar funcionalidad completa de búsqueda de tiendas por nombre y código con filtros avanzados y validaciones de entrada" -m "Task: #76431"
+
+# ❌ Omitir push después del commit
+git commit -m "feat: Nueva funcionalidad" -m "Task: #76431"
+# Falta: git push
+
+# ❌ Múltiples cambios no relacionados en un commit
+git commit -m "feat: Agregar búsqueda y corregir login" -m "Task: #76431"
+```
+
+---

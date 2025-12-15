@@ -1,0 +1,56 @@
+---
+title: "Arquitectura Backend"
+version: "1.0.0"
+applies_to: ["backend"]
+priority: "critical"
+---
+
+# Arquitectura Backend - CW Method RDD
+
+## Estructura
+
+```
+src/
+├── controllers/    # Controladores
+├── services/       # Lógica de negocio
+├── models/         # Modelos de datos
+├── routes/         # Rutas
+├── middleware/     # Middleware
+├── config/         # Configuración
+└── utils/          # Utilidades
+```
+
+## Reglas
+
+### Separación de Capas
+- **Controller**: Manejo de requests
+- **Service**: Lógica de negocio
+- **Model**: Acceso a datos
+
+### ✅ Correcto
+```javascript
+// controller
+async function createUser(req, res) {
+  const user = await userService.create(req.body);
+  res.json(user);
+}
+
+// service
+async function create(data) {
+  return await User.create(data);
+}
+```
+
+### ❌ Incorrecto
+```javascript
+// Todo en el controller
+async function createUser(req, res) {
+  // ❌ Lógica de negocio en controller
+  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+  const user = await User.create({
+    ...req.body,
+    password: hashedPassword
+  });
+  res.json(user);
+}
+```

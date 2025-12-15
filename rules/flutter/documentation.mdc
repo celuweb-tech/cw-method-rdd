@@ -1,0 +1,178 @@
+---
+version: 1.0.0
+description: Documentación - dartdoc, formato, clases, métodos, providers, ejemplos
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+# Documentación
+
+- SIEMPRE documentar todas las clases públicas con `///` (dartdoc)
+- SIEMPRE documentar todos los métodos públicos con descripción y parámetros
+- SIEMPRE usar formato dartdoc estándar (`///` para comentarios de documentación)
+- SIEMPRE documentar parámetros usando `[param]` en la documentación
+- SIEMPRE incluir ejemplos de uso para widgets y clases complejas
+- SIEMPRE documentar providers de Riverpod con propósito y comportamiento
+- NUNCA usar comentarios `//` para documentación pública (usar `///`)
+- NUNCA omitir documentación en clases públicas o métodos públicos
+- NUNCA documentar código privado (métodos/clases con `_`)
+
+## Documentación por Tipo (MANDATORY)
+
+### Clases
+
+Documentar con descripción breve del propósito:
+
+```dart
+/// Implementation of StoresRepository
+///
+/// Handles data fetching from remote sources and mapping to domain entities.
+class StoresRepositoryImpl implements StoresRepository { }
+```
+
+### Métodos
+
+Documentar con descripción y parámetros `[param]`:
+
+```dart
+/// Writes a value to secure storage
+///
+/// [key] - The key to store the value under
+/// [value] - The value to store
+Future<void> write(String key, String value) async { }
+
+/// Reads a value from secure storage
+///
+/// [key] - The key to read the value for
+/// Returns the stored value, or null if not found
+Future<String?> read(String key) async { }
+```
+
+### Providers
+
+Documentar con propósito y comportamiento:
+
+```dart
+/// Secure storage provider
+///
+/// Provides a singleton instance of FlutterSecureStorage for secure data storage.
+@Riverpod(keepAlive: true)
+FlutterSecureStorage secureStorage(Ref ref) {
+  return const FlutterSecureStorage();
+}
+```
+
+### Widgets
+
+Documentar con descripción y ejemplo de uso:
+
+```dart
+/// Custom button widget
+///
+/// A reusable button component with customizable properties.
+/// Supports variants: primary, secondary, destructive, text.
+///
+/// ### Example:
+/// ```dart
+/// CustomButton(
+///   onPressed: () async {},
+///   text: "Guardar",
+///   variant: ButtonVariant.primary,
+/// )
+/// ```
+class CustomButton extends StatefulWidget { }
+```
+
+### Constantes y Enums
+
+Documentar con descripción breve:
+
+```dart
+/// Storage keys constants
+///
+/// Centralizes all storage keys used throughout the application.
+class StorageKeys {
+  /// Authentication token key
+  static const String accessToken = 'access_token';
+}
+
+/// Button variant enum
+enum ButtonVariant {
+  /// Primary action - most important
+  primary,
+  /// Secondary action
+  secondary,
+}
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Usar comentarios // para documentación pública
+// Service wrapper
+class SecureStorageService { }
+
+// ❌ Sin documentación en clase pública
+class SecureStorageService {
+  Future<void> write(String key, String value) async { }
+}
+
+// ❌ Sin documentar parámetros
+/// Writes a value to secure storage
+Future<void> write(String key, String value) async { }
+
+// ❌ Documentar código privado
+class _PrivateHelper {
+  /// Private helper method // ❌ No documentar privados
+  void _helper() { }
+}
+```
+
+## CORRECTO
+
+```dart
+// ✅ Usar /// para documentación pública
+/// Service wrapper for secure storage operations
+///
+/// Provides a clean interface for secure storage operations.
+class SecureStorageService {
+  /// Creates a SecureStorageService instance
+  ///
+  /// [storage] - The FlutterSecureStorage instance to use
+  const SecureStorageService(this._storage);
+
+  /// Writes a value to secure storage
+  ///
+  /// [key] - The key to store the value under
+  /// [value] - The value to store
+  Future<void> write(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+}
+
+// ✅ Documentar providers
+/// Secure storage provider
+///
+/// Provides a singleton instance of FlutterSecureStorage for secure data storage.
+@Riverpod(keepAlive: true)
+FlutterSecureStorage secureStorage(Ref ref) {
+  return const FlutterSecureStorage();
+}
+
+// ✅ Documentar widgets
+/// Custom button widget
+///
+/// A reusable button component with customizable properties.
+///
+/// ### Example:
+/// ```dart
+/// CustomButton(
+///   onPressed: () async {},
+///   text: "Guardar",
+///   variant: ButtonVariant.primary,
+/// )
+/// ```
+class CustomButton extends StatefulWidget { }
+```
+
+---

@@ -1,0 +1,265 @@
+---
+version: 1.0.0
+description: Principios de diseño - DRY, KISS, YAGNI
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Principios de Diseño (DRY, KISS, YAGNI)
+
+- SIEMPRE aplicar DRY (Don't Repeat Yourself) - Eliminar duplicación de código
+- SIEMPRE aplicar KISS (Keep It Simple, Stupid) - Mantener soluciones simples
+- SIEMPRE aplicar YAGNI (You Aren't Gonna Need It) - No implementar funcionalidad hasta que sea necesaria
+- NUNCA duplicar lógica de negocio o código
+- NUNCA crear soluciones complejas cuando una simple funciona
+- NUNCA agregar funcionalidad "por si acaso" sin requerimiento real
+
+## DRY - Don't Repeat Yourself
+
+**No repitas código. Extrae lógica común en funciones/clases reutilizables.**
+
+```dart
+// ❌ PROHIBIDO - Código duplicado
+class UserPage {
+  String formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class OrderPage {
+  String formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+// ✅ CORRECTO - Single source of truth
+class DateFormatter {
+  static String format(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+// O con extension
+extension DateTimeExtension on DateTime {
+  String get formattedDate {
+    return '${day}/${month}/${year}';
+  }
+}
+```
+
+### Aplicación con Extensions y Mixins
+
+```dart
+// ✅ Extension para lógica común
+extension StringValidation on String {
+  bool get isValidEmail {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(this);
+  }
+  
+  bool get isValidPhone {
+    return RegExp(r'^\+?[1-9]\d{1,14}$').hasMatch(this);
+  }
+}
+
+// ✅ Mixin para funcionalidad compartida
+mixin ValidationMixin {
+  bool isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+}
+
+class UserValidator with ValidationMixin {
+  bool validateUser(User user) {
+    return isValidEmail(user.email);
+  }
+}
+```
+
+## KISS - Keep It Simple, Stupid
+
+**Mantén las soluciones simples. La simplicidad debe ser un objetivo clave.**
+
+```dart
+// ❌ PROHIBIDO - Over-engineering
+abstract class PaymentStrategy {
+  Future<PaymentResult> execute(PaymentContext context);
+}
+
+class PaymentStrategyFactory {
+  PaymentStrategy create(PaymentType type) { /* ... */ }
+}
+
+class PaymentContext {
+  final PaymentData data;
+  final PaymentOptions options;
+  // ...
+}
+
+// ✅ CORRECTO - Simple y directo
+Future<void> processPayment(double amount) async {
+  final response = await dio.post('/payments', data: {'amount': amount});
+  // Handle response
+}
+```
+
+### Preferir Soluciones Directas
+
+```dart
+// ❌ PROHIBIDO - Abstracción innecesaria
+abstract class DataFetcher<T> {
+  Future<List<T>> fetch();
+}
+
+class StoreFetcher implements DataFetcher<StoreEntity> {
+  @override
+  Future<List<StoreEntity>> fetch() async { /* ... */ }
+}
+
+// ✅ CORRECTO - Implementación directa cuando solo hay un caso
+class StoresRepository {
+  Future<List<StoreEntity>> getStores() async {
+    // Implementación directa
+  }
+}
+```
+
+### Usar Funcionalidades del Lenguaje
+
+```dart
+// ❌ PROHIBIDO - Lógica compleja manual
+String formatStoreName(StoreEntity store) {
+  String result = '';
+  if (store.name != null) {
+    result = store.name!.trim();
+    if (result.length > 20) {
+      result = result.substring(0, 20) + '...';
+    }
+  }
+  return result;
+}
+
+// ✅ CORRECTO - Usar funcionalidades del lenguaje
+String formatStoreName(StoreEntity store) {
+  return store.name?.trim().substring(0, 20) ?? '';
+}
+```
+
+## YAGNI - You Aren't Gonna Need It
+
+**No implementes funcionalidad hasta que realmente la necesites.**
+
+```dart
+// ❌ PROHIBIDO - Funcionalidad no requerida
+class StoreRepository {
+  Future<List<StoreEntity>> getStores() async { /* ... */ }
+  
+  // ❌ No se requiere aún
+  Future<List<StoreEntity>> getStoresByCategory(String category) async {
+    throw UnimplementedError();
+  }
+  
+  // ❌ No se requiere aún
+  Future<List<StoreEntity>> getStoresByRating(double minRating) async {
+    throw UnimplementedError();
+  }
+}
+
+// ✅ CORRECTO - Solo lo requerido
+class StoreRepository {
+  Future<List<StoreEntity>> getStores() async {
+    // Solo implementar lo que se necesita ahora
+  }
+}
+```
+
+### Evitar Over-Engineering
+
+```dart
+// ❌ PROHIBIDO - Arquitectura compleja sin necesidad
+abstract class StoreRepository {
+  Future<List<StoreEntity>> getStores();
+}
+
+abstract class StoreCacheRepository {
+  Future<void> cacheStores(List<StoreEntity> stores);
+}
+
+abstract class StoreSyncRepository {
+  Future<void> syncStores();
+}
+
+// ✅ CORRECTO - Implementar solo lo necesario
+class StoresRepository {
+  Future<List<StoreEntity>> getStores() async {
+    // Solo lo que se necesita ahora
+  }
+}
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ DRY - Código duplicado
+class UserValidator {
+  bool validateEmail(String email) { /* ... */ }
+}
+class StoreValidator {
+  bool validateEmail(String email) { /* ... */ } // Duplicado
+}
+
+// ❌ KISS - Solución compleja innecesaria
+class ComplexFilter {
+  final Map<String, dynamic> _filters = {};
+  final List<Function> _callbacks = [];
+  // ... complejidad innecesaria
+}
+
+// ❌ YAGNI - Funcionalidad no requerida
+class Repository {
+  Future<List<Entity>> getAll() { }
+  Future<List<Entity>> getByCategory() { } // No se necesita aún
+  Future<List<Entity>> getByRating() { } // No se necesita aún
+}
+```
+
+## CORRECTO
+
+```dart
+// ✅ DRY - Lógica centralizada
+class EmailValidator {
+  static bool isValid(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+}
+
+// O con extension
+extension StringValidation on String {
+  bool get isValidEmail {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(this);
+  }
+}
+
+// ✅ KISS - Solución simple
+class StoreFilter {
+  final String? name;
+  final String? city;
+  
+  List<StoreEntity> apply(List<StoreEntity> stores) {
+    return stores.where((store) {
+      if (name != null && !store.name.contains(name!)) return false;
+      if (city != null && store.city != city) return false;
+      return true;
+    }).toList();
+  }
+}
+
+// ✅ YAGNI - Solo lo necesario
+class StoresRepository {
+  Future<List<StoreEntity>> getStores() async {
+    // Solo implementar lo requerido ahora
+  }
+}
+```
+
+---

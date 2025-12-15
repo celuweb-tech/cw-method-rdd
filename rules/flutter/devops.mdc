@@ -1,0 +1,277 @@
+---
+version: 1.0.0
+description: Reglas de Azure DevOps - Creación, modificación y cierre de work items
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Reglas de Azure DevOps
+
+- SIEMPRE consultar variables dinámicas (CURRENT_SPRINT, SPRINT_END_DATE, CURRENT_USER) antes de crear work items
+- SIEMPRE incluir todos los campos requeridos al crear tareas (9 campos obligatorios)
+- SIEMPRE verificar `System.AssignedTo` antes de modificar work items existentes
+- SIEMPRE usar formato HTML (`<br>`) para descripciones, nunca `\n`
+- SIEMPRE usar doble backslash (`\\`) en `System.IterationPath`
+- SIEMPRE usar formato ISO 8601 para fechas (`YYYY-MM-DDTHH:MM:SSZ`)
+- NUNCA modificar `System.Title` si el work item tiene asignación (`System.AssignedTo` poblado)
+- NUNCA incluir `RemainingWork` al cerrar tareas (causa error TF401320)
+- NUNCA usar caracteres escapados (`\u00XX`) - usar directamente (á, é, í, ó, ú, ñ)
+
+## Variables de Configuración
+
+**Variables estáticas** (definidas en proyecto):
+- `PROJECT_NAME`: "B2B"
+- `PROJECT_TAG`: "B2B"
+- `ORGANIZATION_URL`: "https://dev.azure.com/celuweb20"
+
+**Variables dinámicas** (consultar desde Azure DevOps y Git):
+- `CURRENT_SPRINT`: Nombre del sprint actual (ej: "Sprint 02")
+- `SPRINT_END_DATE`: Fecha de fin del sprint (ej: "2025-11-28T23:59:59Z")
+- `CURRENT_USER`: Usuario en sesión desde Git config (ej: "Armando Casas <armando.casas@celuweb.com>")
+
+**Método de consulta**:
+```python
+# Sprint actual desde Azure DevOps API
+current_iteration = get_team_iteration(team="B2B Team", timeframe="current")
+CURRENT_SPRINT = current_iteration["name"]
+SPRINT_END_DATE = current_iteration["attributes"]["finishDate"]
+
+# Usuario desde Git config
+CURRENT_USER = f"{git_config('user.name')} <{git_config('user.email')}>"
+```
+
+## Creación de User Stories
+
+**Campos obligatorios**:
+1. `System.Title`: Título claro y conciso
+2. `System.Description`: Formato "Como [rol], quiero [acción] para [beneficio]" en HTML
+3. `Microsoft.VSTS.Common.AcceptanceCriteria`: Criterios en HTML con viñetas (`<br>`)
+4. `Custom.TagsProyecto`: `{PROJECT_TAG}`
+5. `Custom.TagsFrente`: Determinar según contexto (DESARROLLO MOVIL, DESARROLLO WEB, etc.)
+6. `Microsoft.VSTS.Scheduling.Effort`: Story points (acordar con usuario)
+7. `Microsoft.VSTS.Scheduling.FinishDate`: `{SPRINT_END_DATE}`
+8. `System.IterationPath`: `{PROJECT_NAME}\\{CURRENT_SPRINT}` (doble backslash)
+
+**Ejemplo**:
+```python
+user_story = {
+    "System.Title": "Visualizar tiendas asignadas",
+    "System.Description": "<div><strong>Como</strong> cliente de la aplicación B2B, <strong>quiero</strong> visualizar mis tiendas asignadas <strong>para</strong> gestionar pedidos de forma eficiente.</div>",
+    "Microsoft.VSTS.Common.AcceptanceCriteria": "<div>- Dado que el usuario está autenticado, cuando acceda a \"Mis Tiendas\", entonces debe visualizar una lista de tiendas asignadas.<br>- Dado que no hay tiendas asignadas, cuando acceda a la pantalla, entonces debe visualizar un mensaje de \"No hay tiendas disponibles\".</div>",
+    "Custom.TagsProyecto": PROJECT_TAG,
+    "Custom.TagsFrente": "DESARROLLO MOVIL",
+    "Microsoft.VSTS.Scheduling.Effort": "3",
+    "Microsoft.VSTS.Scheduling.FinishDate": SPRINT_END_DATE,
+    "System.IterationPath": f"{PROJECT_NAME}\\{CURRENT_SPRINT}"
+}
+```
+
+## Creación de Tasks
+
+**Campos obligatorios** (9 campos):
+1. `System.Title`: Verbo en infinitivo + descripción breve
+2. `System.Description`: Descripción en HTML con `<br>` (no `\n`)
+3. `Custom.TagsProyecto`: `{PROJECT_TAG}`
+4. `Custom.TagsFrente`: Determinar según contexto
+5. `Microsoft.VSTS.Scheduling.OriginalEstimate`: Horas estimadas
+6. `Microsoft.VSTS.Scheduling.RemainingWork`: Igual a Original Estimate
+7. `Microsoft.VSTS.Scheduling.FinishDate`: `{SPRINT_END_DATE}` formato ISO
+8. `System.IterationPath`: `{PROJECT_NAME}\\{CURRENT_SPRINT}` (doble backslash)
+9. `System.AssignedTo`: `{CURRENT_USER}` (OBLIGATORIO)
+
+**Ejemplo**:
+```python
+task = {
+    "System.Title": "Implementar barra de búsqueda",
+    "System.Description": "<div>Implementar la funcionalidad de búsqueda de tiendas por nombre o código.<br><br><strong>Contexto técnico:</strong><br>- Usar debounce de 500ms<br>- Filtrar resultados desde el controlador usando Riverpod<br></div>",
+    "Custom.TagsProyecto": PROJECT_TAG,
+    "Custom.TagsFrente": "DESARROLLO MOVIL",
+    "Microsoft.VSTS.Scheduling.OriginalEstimate": "2",
+    "Microsoft.VSTS.Scheduling.RemainingWork": "2",
+    "Microsoft.VSTS.Scheduling.FinishDate": f"{SPRINT_END_DATE}T05:00:00Z",
+    "System.IterationPath": f"{PROJECT_NAME}\\{CURRENT_SPRINT}",
+    "System.AssignedTo": CURRENT_USER
+}
+```
+
+## Modificación de Work Items
+
+**CRÍTICO**: Verificar asignación antes de modificar.
+
+**Reglas**:
+- Si `System.AssignedTo` está poblado → NO modificar `System.Title`
+- Si `System.AssignedTo` está poblado → SOLO modificar: descripción, criterios, tags, fechas, remaining work
+- Si `System.AssignedTo` está vacío → Modificar todos los campos necesarios
+
+**Flujo de validación**:
+```python
+work_item = wit_get_work_item(id=story_id)
+assigned_to = work_item.get("fields", {}).get("System.AssignedTo")
+
+updates = []
+
+# Solo agregar título si NO tiene asignación
+if not assigned_to:
+    updates.append({
+        "op": "replace",
+        "path": "/fields/System.Title",
+        "value": new_title
+    })
+else:
+    print(f"⚠️ Work item asignado a {assigned_to}, título NO se modifica")
+
+# Siempre se pueden modificar estos campos
+updates.append({
+    "op": "replace",
+    "path": "/fields/System.Description",
+    "value": new_description
+})
+```
+
+## Cierre de Tasks
+
+**Campos requeridos**:
+- `System.State`: `"Closed"`
+- `Microsoft.VSTS.Scheduling.CompletedWork`: Horas reales trabajadas
+- `Custom.Fecharealentrega`: Fecha actual formato ISO
+
+**⚠️ CRÍTICO**: NO incluir `RemainingWork` al cerrar (causa error `TF401320: InvalidNotEmpty`)
+
+**Ejemplo**:
+```python
+# ✅ CORRECTO
+close_task = {
+    "System.State": "Closed",
+    "Microsoft.VSTS.Scheduling.CompletedWork": "3",
+    "Custom.Fecharealentrega": "2025-01-21T00:00:00Z"
+    # NO incluir RemainingWork - Azure DevOps lo maneja automáticamente
+}
+
+# ❌ INCORRECTO - Causa error TF401320
+close_task = {
+    "System.State": "Closed",
+    "Microsoft.VSTS.Scheduling.CompletedWork": "3",
+    "Microsoft.VSTS.Scheduling.RemainingWork": "0",  # ❌ NO incluir
+    "Custom.Fecharealentrega": "2025-01-21T00:00:00Z"
+}
+```
+
+**Comentario de cierre** (formato markdown, sin emojis):
+```markdown
+**Implementar barra de búsqueda**
+
+Se implementó la funcionalidad de búsqueda de tiendas permitiendo filtrar por nombre o código con optimización mediante debounce.
+
+Pasos realizados:
+- Agregado campo de texto con icono de búsqueda en AppBar
+- Implementado controlador de búsqueda con debounce de 500ms
+- Creado método de filtrado en StoreController usando Riverpod
+- Agregado soporte para búsqueda con acentos y caracteres especiales
+- Implementados tests unitarios para la funcionalidad de búsqueda
+```
+
+## Cierre de User Stories
+
+**Campos requeridos**:
+- `System.State`: `"Resolved"` (NO "Closed")
+- `Custom.Fecharealentrega`: Fecha actual formato ISO
+
+**Nota**: User Stories NO requieren `CompletedWork` (se mide por Story Points).
+
+**Ejemplo**:
+```python
+close_user_story = {
+    "System.State": "Resolved",  # NO "Closed"
+    "Custom.Fecharealentrega": "2025-01-21T00:00:00Z"
+}
+```
+
+## Tags Frente Permitidos
+
+- `DESARROLLO MOVIL`: Aplicaciones móviles (Flutter, React Native)
+- `DESARROLLO WEB`: Aplicaciones web (React, Angular, Vue)
+- `DESARROLLO BACKEND`: APIs y servicios
+- `DESARROLLO REPORTES`: Reportería y analítica
+- `ACTIVIDADES TRANSVERSALES`: Ceremonias Scrum, documentación
+- `DEVOPS`: Infraestructura y CI/CD
+- `QA/TESTING`: Pruebas y calidad
+- `BASES DE DATOS`: Diseño de BD, migraciones
+
+## PROHIBIDO
+
+```python
+# ❌ Crear tarea sin todos los campos requeridos
+task = {
+    "System.Title": "Implementar búsqueda",
+    # Falta: Description, Tags, Estimates, etc.
+}
+
+# ❌ Modificar título de work item asignado
+if assigned_to:
+    updates.append({"op": "replace", "path": "/fields/System.Title", "value": new_title})  # ❌
+
+# ❌ Usar \n en descripciones
+"System.Description": "Primera línea\nSegunda línea"  # ❌ Debe usar <br>
+
+# ❌ Single backslash en IterationPath
+"System.IterationPath": "B2B\Sprint 02"  # ❌ Debe ser "B2B\\Sprint 02"
+
+# ❌ Incluir RemainingWork al cerrar tarea
+close_task = {
+    "System.State": "Closed",
+    "Microsoft.VSTS.Scheduling.RemainingWork": "0"  # ❌ Causa error TF401320
+}
+
+# ❌ Caracteres escapados
+comment = "Se cre\u00f3 documentaci\u00f3n"  # ❌ Debe ser "Se creó documentación"
+
+# ❌ User Story con estado "Closed"
+close_user_story = {
+    "System.State": "Closed"  # ❌ Debe ser "Resolved"
+}
+```
+
+## CORRECTO
+
+```python
+# ✅ Consultar variables dinámicas antes de crear
+CURRENT_SPRINT = get_current_sprint()
+SPRINT_END_DATE = get_sprint_end_date()
+CURRENT_USER = get_current_user()
+
+# ✅ Crear tarea con todos los campos requeridos
+task = {
+    "System.Title": "Implementar barra de búsqueda",
+    "System.Description": "<div>Descripción<br><br>Contexto técnico<br></div>",
+    "Custom.TagsProyecto": PROJECT_TAG,
+    "Custom.TagsFrente": "DESARROLLO MOVIL",
+    "Microsoft.VSTS.Scheduling.OriginalEstimate": "2",
+    "Microsoft.VSTS.Scheduling.RemainingWork": "2",
+    "Microsoft.VSTS.Scheduling.FinishDate": f"{SPRINT_END_DATE}T05:00:00Z",
+    "System.IterationPath": f"{PROJECT_NAME}\\{CURRENT_SPRINT}",
+    "System.AssignedTo": CURRENT_USER
+}
+
+# ✅ Verificar asignación antes de modificar
+if not assigned_to:
+    updates.append({"op": "replace", "path": "/fields/System.Title", "value": new_title})
+
+# ✅ Cerrar tarea sin RemainingWork
+close_task = {
+    "System.State": "Closed",
+    "Microsoft.VSTS.Scheduling.CompletedWork": "3",
+    "Custom.Fecharealentrega": "2025-01-21T00:00:00Z"
+}
+
+# ✅ Cerrar User Story con "Resolved"
+close_user_story = {
+    "System.State": "Resolved",
+    "Custom.Fecharealentrega": "2025-01-21T00:00:00Z"
+}
+
+# ✅ Usar caracteres especiales directamente
+comment = "Se creó documentación con información útil"
+```
+
+---

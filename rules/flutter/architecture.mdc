@@ -1,0 +1,276 @@
+---
+version: 1.0.0
+description: Reglas de arquitectura - Clean Architecture con 3 capas
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Arquitectura
+
+- SIEMPRE seguir Clean Architecture con 3 capas: Presentation → Domain → Data
+- SIEMPRE respetar la regla de dependencias: capas internas NUNCA dependen de externas
+- SIEMPRE usar la estructura de carpetas estándar para cada feature
+- SIEMPRE crear barrel files para agrupar exports
+- NUNCA hacer que Domain dependa de Presentation o Data
+- NUNCA exponer Models directamente a Presentation layer
+
+## Clean Architecture - 3 Capas
+
+```
+[Presentation Layer] → [Domain Layer] → [Data Layer]
+```
+
+### Regla de Dependencias
+
+Las dependencias fluyen únicamente hacia adentro:
+- ✅ Presentation puede depender de Domain
+- ✅ Data puede depender de Domain
+- ❌ Domain NO puede depender de Presentation o Data
+- ❌ Presentation NO puede depender de Data directamente
+
+## Estructura del Proyecto (MANDATORY)
+
+```
+lib/
+├── core/                    # Funcionalidades core
+│   ├── api/                 # Endpoints centralizados
+│   ├── constants/           # Constantes y tipografías
+│   ├── di/                  # Dependency injection
+│   ├── env/                 # Variables de entorno
+│   ├── errors/              # Error handling
+│   ├── network/             # Dio client e interceptors
+│   ├── router/              # GoRouter config
+│   └── storage/             # Secure storage
+├── features/                # Features modulares
+│   └── [feature_name]/
+│       ├── data/
+│       ├── domain/
+│       └── presentation/
+├── shared/                  # Código compartido
+│   ├── assets/              # Fonts, icons, images
+│   ├── colors/              # MyColors class
+│   ├── styles/              # TextStyles system
+│   ├── utils/               # Responsive, validators, extensions
+│   └── widgets/             # Widgets reutilizables
+└── l10n/                    # Archivos de localización
+    ├── app_en.arb
+    └── app_es.arb
+```
+
+## Core Module (`lib/core/`)
+
+Estructura MANDATORY:
+
+```
+core/
+├── api/api_endpoints.dart
+├── constants/ (fonts.dart, app_constants.dart)
+├── di/ (di.dart, providers.dart)
+├── env/env.dart
+├── errors/ (failures.dart, result.dart, error_handler.dart)
+├── network/ (dio_client.dart, interceptors/)
+├── router/app_router.dart
+└── storage/ (secure_storage_service.dart, storage_keys.dart)
+```
+
+## Shared Module (`lib/shared/`)
+
+Estructura MANDATORY:
+
+```
+shared/
+├── assets/ (fonts/, icons/, images/)
+├── colors/colors.dart
+├── styles/text_styles.dart
+├── utils/ (responsive.dart, validators.dart, extensions.dart)
+└── widgets/ (custom_button.dart, custom_app_bar.dart, etc.)
+```
+
+## Feature Structure (`lib/features/[feature_name]/`)
+
+Cada feature DEBE seguir esta estructura:
+
+```
+lib/features/[feature_name]/
+├── data/
+│   ├── datasources/ (local/, remote/)
+│   ├── models/ ([model]_model.dart, models.dart)
+│   ├── repositories/ ([feature]_repository_impl.dart, repositories.dart)
+│   └── providers.dart
+├── domain/
+│   ├── entities/ ([entity]_entity.dart, entities.dart)
+│   ├── repositories/ ([feature]_repository.dart, repositories.dart)
+│   └── usecases/ ([action]_usecase.dart, usecases.dart)
+└── presentation/
+    ├── controllers/ ([feature]_controller.dart, [feature]_state.dart)
+    ├── pages/ ([feature]_page.dart, pages.dart)
+    └── widgets/ ([widget]_widget.dart, widgets.dart)
+```
+
+## Test Structure (`test/`)
+
+Los tests DEBEN reflejar la estructura de `lib/`:
+
+```
+test/
+├── core/ (di/, errors/, network/, storage/)
+├── features/[feature_name]/ (data/, domain/, presentation/)
+└── shared/ (styles/, utils/, widgets/)
+```
+
+**Naming:** `[archivo]_test.dart` (ej: `store_model_test.dart`)
+
+## Capas y Responsabilidades
+
+### Presentation Layer (`features/*/presentation/`)
+
+**Responsabilidades:** UI widgets, Riverpod providers/controllers, State management
+
+**Dependencias permitidas:** ✅ Domain layer (entities, use cases, repository interfaces)
+
+```dart
+@riverpod
+class StoresController extends _$StoresController {
+  final GetStoresUseCase _getStoresUseCase; // ✅ OK - Domain
+}
+```
+
+### Domain Layer (`features/*/domain/`)
+
+**Responsabilidades:** Business entities, Use cases, Repository interfaces
+
+**Dependencias permitidas:** ❌ NINGUNA - Completamente independiente
+
+```dart
+@freezed
+abstract class StoreEntity with _$StoreEntity {
+  const factory StoreEntity({
+    required String id,
+    required String name,
+  }) = _StoreEntity;
+}
+```
+
+### Data Layer (`features/*/data/`)
+
+**Responsabilidades:** Implementaciones de repositorios, Data sources, Models
+
+**Dependencias permitidas:** ✅ Domain layer (entities, repository interfaces)
+
+```dart
+@freezed
+abstract class StoreModel with _$StoreModel {
+  StoreEntity toEntity() => StoreEntity(id: id, name: name);
+}
+
+class StoresRepositoryImpl implements StoresRepository {
+  // ✅ OK - Implementa interfaz de Domain
+}
+```
+
+## Flujo de Transformación
+
+```
+API Response → Model → Entity → Use Case → Provider → UI
+```
+
+## Barrel Files (MANDATORY)
+
+SIEMPRE crear barrel files para agrupar exports:
+
+```dart
+// domain/entities/entities.dart
+export 'store_entity.dart';
+
+// data/models/models.dart
+export 'store_model.dart';
+```
+
+**Uso:**
+```dart
+// ✅ CORRECTO
+import 'package:b2b/features/stores/domain/entities/entities.dart';
+
+// ❌ INCORRECTO
+import 'package:b2b/features/stores/domain/entities/store_entity.dart';
+import 'package:b2b/features/stores/domain/entities/store_filter_entity.dart';
+```
+
+## Naming Conventions
+
+### Archivos
+- Snake_case: `user_repository.dart`
+- Sufijos: `*_page.dart`, `*_widget.dart`, `*_controller.dart`, `*_state.dart`, `*_model.dart`, `*_entity.dart`, `*_usecase.dart`, `*_repository.dart`, `*_repository_impl.dart`, `*_data_source.dart`, `*_test.dart`
+
+### Clases
+- PascalCase: `UserRepository`
+- Descriptivo y específico
+- Sin abreviaciones: `UserRepo` ❌ → `UserRepository` ✅
+
+## PROHIBIDO
+
+```dart
+// Domain → Data (VIOLACIÓN)
+class GetStoresUseCase {
+  final StoresRemoteDataSource _dataSource; // ❌ WRONG
+}
+
+// Presentation → Data (VIOLACIÓN)
+class StoresController {
+  final StoresRepositoryImpl _repository; // ❌ WRONG
+}
+
+// Exponer Model directamente
+class StoresPage extends ConsumerWidget {
+  final StoreModel store; // ❌ WRONG
+}
+```
+
+## CORRECTO
+
+```dart
+// Presentation → Domain
+class StoresController {
+  final GetStoresUseCase _getStoresUseCase; // ✅ OK
+  final StoresRepository _repository; // ✅ OK - Interfaz
+}
+
+// Usar Entity en Presentation
+class StoresPage extends ConsumerWidget {
+  final StoreEntity store; // ✅ OK
+}
+
+// Transformar Model → Entity
+class StoresRepositoryImpl {
+  FutureResult<List<StoreEntity>> getStores() async {
+    final models = await _dataSource.getStores();
+    return models.map((m) => m.toEntity()).toList();
+  }
+}
+```
+
+## One Class Per File (MANDATORY)
+
+SIEMPRE mantener una clase pública por archivo:
+
+```dart
+// ✅ CORRECTO
+// store_entity.dart
+@freezed
+abstract class StoreEntity with _$StoreEntity {
+  const factory StoreEntity({...}) = _StoreEntity;
+}
+
+// ❌ INCORRECTO
+// entities.dart
+class StoreEntity { ... }
+class StoreFilterEntity { ... } // Múltiples clases públicas
+```
+
+**Excepciones permitidas:**
+- Helper classes privadas: `class _PrivateHelper { ... }`
+- Extensions: `extension StoreModelX on StoreModel { ... }`
+- Freezed unions: `@freezed` con múltiples factories
+
+---

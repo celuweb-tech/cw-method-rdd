@@ -1,0 +1,75 @@
+---
+version: 1.0.0
+description: Reglas de localización - Todo texto debe usar AppLocalizations
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Localización
+
+- TODOS los textos visibles al usuario DEBEN estar traducidos
+- NUNCA crear textos hardcodeados - Todo DEBE ir en los archivos de traducciones
+- NUNCA hardcodear textos en español o inglés
+
+## Archivos ARB
+
+Agregar strings en `lib/l10n/app_en.arb` y `lib/l10n/app_es.arb`
+
+### Formato Básico (sin parámetros)
+
+```json
+{
+  "login": "Iniciar sesión",
+  "my_stores": "Mis Tiendas",
+  "products": "Productos"
+}
+```
+
+### Con Parámetros (solo cuando sea necesario)
+
+Usa `@key` SOLO si el texto tiene variables o plurales:
+
+```json
+{
+  "welcome_user": "Bienvenido, {userName}",
+  "@welcome_user": {
+    "placeholders": {
+      "userName": { "type": "String" }
+    }
+  },
+  "itemsCount": "{count, plural, =0{Sin artículos} =1{1 artículo} other{{count} artículos}}",
+  "@itemsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
+}
+```
+
+## Uso en Código
+
+```dart
+// Obtener localización
+final strings = AppLocalizations.of(context);
+
+// Usar
+Text(strings.login)
+Text(strings.welcomeUser('Juan'))
+Text(strings.itemsCount(5))
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+Text('Login')
+```
+
+## CORRECTO
+
+```dart
+Text(l10n.login)
+```
+
+---

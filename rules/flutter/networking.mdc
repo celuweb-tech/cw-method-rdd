@@ -1,0 +1,222 @@
+---
+version: 1.0.0
+description: Reglas de networking - Usar Dio con interceptors y endpoints centralizados
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Reglas de Networking
+
+- SIEMPRE usar Dio como único cliente HTTP
+- SIEMPRE crear el cliente usando `DioClient.create()`
+- SIEMPRE usar interceptors: `AuthInterceptor` y `LoggingInterceptor`
+- SIEMPRE centralizar endpoints en `ApiEndpoints`
+- SIEMPRE usar `dioClientProvider` de Riverpod para obtener instancia de Dio
+- NUNCA crear instancias de Dio directamente sin usar `DioClient`
+- NUNCA hardcodear URLs o endpoints directamente
+
+## Creación del Cliente Dio
+
+El cliente DEBE crearse usando `DioClient.create()`:
+
+```dart
+import 'package:b2b/core/network/dio_client.dart';
+import 'package:b2b/core/di/providers.dart';
+import 'package:dio/dio.dart';
+
+// En providers (Riverpod)
+@Riverpod(keepAlive: true)
+Dio dioClient(Ref ref) {
+  final keycloakDataSource = ref.watch(keycloakDataSourceProvider);
+  return DioClient.create(keycloakDataSource: keycloakDataSource);
+}
+
+// En data sources (inyectar desde provider)
+class StoresRemoteDataSource {
+  final Dio _dio;
+
+  StoresRemoteDataSource(this._dio);
+}
+```
+
+## Configuración del Cliente
+
+El cliente está configurado con:
+- Base URL desde variables de entorno (`Env.api`)
+- Timeouts: 30 segundos (connect, receive, send)
+- Headers por defecto: `Content-Type: application/json`, `Accept: application/json`
+- Interceptors: `AuthInterceptor` (primero), `LoggingInterceptor` (segundo)
+
+## Interceptors
+
+### AuthInterceptor (MANDATORY)
+
+Inyecta automáticamente tokens de autenticación:
+
+```dart
+// Ya está configurado en DioClient
+// Inyecta automáticamente: Authorization: Bearer {token}
+```
+
+### LoggingInterceptor (MANDATORY)
+
+Loggea requests/responses solo en debug mode:
+
+```dart
+// Ya está configurado en DioClient
+// Solo loguea cuando kDebugMode == true
+```
+
+## Endpoints Centralizados
+
+SIEMPRE definir endpoints en `lib/core/api/api_endpoints.dart`:
+
+```dart
+class ApiEndpoints {
+  ApiEndpoints._();
+
+  // Stores
+  static const String search = '/v1/branches/search';
+  
+  // Más endpoints...
+  static String storeById(String id) => '/v1/stores/$id';
+  static String products = '/v1/products';
+}
+```
+
+## Uso en Data Sources
+
+```dart
+import 'package:b2b/core/api/api_endpoints.dart';
+import 'package:dio/dio.dart';
+
+class StoresRemoteDataSource {
+  final Dio _dio;
+
+  StoresRemoteDataSource(this._dio);
+
+  Future<StoresResponseModel> getStores() async {
+    final response = await _dio.post(
+      ApiEndpoints.search,
+      data: requestBody.toJson(),
+    );
+    
+    return StoresResponseModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+}
+```
+
+## Métodos HTTP
+
+### GET Request
+
+```dart
+final response = await _dio.get(ApiEndpoints.stores);
+```
+
+### POST Request
+
+```dart
+final response = await _dio.post(
+  ApiEndpoints.search,
+  data: requestBody.toJson(),
+);
+```
+
+### PUT Request
+
+```dart
+final response = await _dio.put(
+  ApiEndpoints.storeById(id),
+  data: updateData.toJson(),
+);
+```
+
+### DELETE Request
+
+```dart
+await _dio.delete(ApiEndpoints.storeById(id));
+```
+
+### Query Parameters
+
+```dart
+final response = await _dio.get(
+  ApiEndpoints.products,
+  queryParameters: {
+    'page': 1,
+    'limit': 20,
+    if (category != null) 'category': category,
+  },
+);
+```
+
+## Manejo de Errores
+
+Los errores se manejan como `DioException`:
+
+```dart
+try {
+  final response = await _dio.get(ApiEndpoints.stores);
+  return parseResponse(response);
+} on DioException catch (e) {
+  // El ErrorHandler se encarga del mapeo en el Repository
+  rethrow;
+}
+```
+
+## Timeouts
+
+Los timeouts están configurados globalmente (30 segundos). Para override por request:
+
+```dart
+final response = await _dio.get(
+  ApiEndpoints.stores,
+  options: Options(
+    receiveTimeout: const Duration(seconds: 60),
+  ),
+);
+```
+
+## PROHIBIDO
+
+```dart
+// NUNCA hacer esto:
+final dio = Dio(); // Crear instancia directamente
+
+final dio = Dio(BaseOptions(
+  baseUrl: 'https://api.example.com', // Hardcoded URL
+));
+
+final response = await dio.get('/stores'); // Hardcoded endpoint
+
+final response = await http.get(Uri.parse(url)); // Usar http package
+```
+
+## CORRECTO
+
+```dart
+// Usar DioClient.create() en providers
+@Riverpod(keepAlive: true)
+Dio dioClient(Ref ref) {
+  final keycloakDataSource = ref.watch(keycloakDataSourceProvider);
+  return DioClient.create(keycloakDataSource: keycloakDataSource);
+}
+
+// Usar endpoints centralizados
+final response = await _dio.post(
+  ApiEndpoints.search,
+  data: requestBody.toJson(),
+);
+
+// Inyectar desde provider
+class MyDataSource {
+  final Dio _dio;
+  MyDataSource(this._dio);
+}
+```
+
+---

@@ -1,0 +1,285 @@
+---
+version: 1.0.0
+description: Accesibilidad - Semantics, ValueKey, testing con Appium, screen readers
+globs:
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Accesibilidad
+
+- SIEMPRE agregar `Semantics` widget con `identifier` para todos los widgets interactivos
+- SIEMPRE usar `ValueKey` o `Key` con nombres descriptivos para widgets interactivos
+- SIEMPRE usar `semanticsLabel` para describir widgets a screen readers
+- SIEMPRE usar nombres descriptivos y únicos para semantic identifiers (formato: `feature_widget_action`)
+- SIEMPRE asegurar que todos los botones, campos de texto y elementos interactivos tengan semantic identification
+- NUNCA usar identificadores genéricos o duplicados
+- NUNCA omitir semantic identification en widgets interactivos
+- NUNCA usar solo texto como identificador (usar semantic identifier)
+
+## Semantic Identification (MANDATORY)
+
+**DEBE** agregar `Semantics` widget con `identifier` para testing automatizado:
+
+```dart
+// ✅ CORRECTO - Con Semantics widget
+Semantics(
+  identifier: 'auth_sign_in_button',
+  label: 'Iniciar sesión',
+  button: true,
+  child: CustomButton(
+    onPressed: () async {},
+    text: strings.auth_sign_in,
+    variant: ButtonVariant.primary,
+  ),
+)
+
+// ✅ CORRECTO - CustomButton ya incluye Semantics internamente
+CustomButton(
+  semanticId: 'auth_sign_in_button', // ✅ Se convierte en Semantics identifier
+  onPressed: () async {},
+  text: strings.auth_sign_in,
+  variant: ButtonVariant.primary,
+)
+
+// ✅ CORRECTO - TextField con Semantics
+Semantics(
+  identifier: 'login_email_field',
+  label: 'Correo electrónico',
+  textField: true,
+  child: TextField(
+    decoration: InputDecoration(labelText: strings.email),
+  ),
+)
+```
+
+## ValueKey para Widgets Interactivos (MANDATORY)
+
+**DEBE** usar `ValueKey` o `Key` con nombres descriptivos:
+
+```dart
+// ✅ CORRECTO - Key descriptivo para widget interactivo
+CustomButton(
+  key: const Key('auth_sign_in_button'),
+  semanticId: 'auth_sign_in_button',
+  onPressed: () async {},
+  text: strings.auth_sign_in,
+)
+
+// ✅ CORRECTO - Key para TextField
+TextField(
+  key: const Key('login_email_field'),
+  decoration: InputDecoration(labelText: strings.email),
+)
+
+// ✅ CORRECTO - Key para ListTile
+ListTile(
+  key: Key('store_item_$storeId'),
+  title: Text(store.name),
+  onTap: () {},
+)
+```
+
+## Naming Convention para Semantic IDs (MANDATORY)
+
+**DEBE** usar formato: `feature_widget_action`:
+
+```dart
+// ✅ CORRECTO - Formato descriptivo
+'auth_sign_in_button'        // feature: auth, widget: sign_in, action: button
+'stores_list_item'          // feature: stores, widget: list, action: item
+'products_search_field'     // feature: products, widget: search, action: field
+'cart_checkout_button'      // feature: cart, widget: checkout, action: button
+'profile_edit_save_button'  // feature: profile, widget: edit, action: save_button
+
+// ❌ INCORRECTO - Genéricos o poco descriptivos
+'button'                    // ❌ Muy genérico
+'btn1'                      // ❌ No descriptivo
+'sign_in'                   // ❌ Falta contexto de feature
+```
+
+## SemanticsLabel para Screen Readers (MANDATORY)
+
+**DEBE** usar `semanticsLabel` o `label` en Semantics:
+
+```dart
+// ✅ CORRECTO - Con label para screen readers
+Semantics(
+  identifier: 'auth_sign_in_button',
+  label: strings.auth_sign_in, // ✅ Texto localizado
+  button: true,
+  child: CustomButton(
+    onPressed: () async {},
+    text: strings.auth_sign_in,
+  ),
+)
+
+// ✅ CORRECTO - IconButton con label
+Semantics(
+  identifier: 'stores_search_button',
+  label: strings.search,
+  button: true,
+  child: IconButton(
+    icon: const Icon(Icons.search),
+    onPressed: () {},
+  ),
+)
+
+// ✅ CORRECTO - Image con label
+Semantics(
+  identifier: 'splash_logo_image',
+  label: strings.app_logo,
+  image: true,
+  child: Image.asset(PathAssets.b2bWhite),
+)
+```
+
+## Widgets que DEBEN Tener Semantic Identification
+
+**MANDATORY** para estos widgets:
+
+1. **Botones** (`CustomButton`, `IconButton`, `FloatingActionButton`)
+2. **Campos de texto** (`TextField`, `TextFormField`)
+3. **Elementos de lista** (`ListTile`, `Card` con onTap)
+4. **Imágenes interactivas** (`Image` con GestureDetector)
+5. **Checkboxes y Switches**
+6. **Radio buttons**
+7. **Tabs y Navigation items**
+
+```dart
+// ✅ CORRECTO - Todos los widgets interactivos con Semantics
+Semantics(
+  identifier: 'stores_filter_checkbox',
+  label: strings.filter_stores,
+  child: Checkbox(
+    value: isFiltered,
+    onChanged: (value) {},
+  ),
+)
+
+Semantics(
+  identifier: 'products_sort_dropdown',
+  label: strings.sort_by,
+  child: DropdownButton(
+    items: sortOptions,
+    onChanged: (value) {},
+  ),
+)
+```
+
+## Testing con Appium y Herramientas Automatizadas
+
+**DEBE** usar semantic identifiers para testing:
+
+```dart
+// Los semantic identifiers permiten encontrar widgets en Appium:
+// driver.findElement(By.id('auth_sign_in_button'))
+// driver.findElement(By.id('login_email_field'))
+
+// ✅ CORRECTO - Identificador único y descriptivo
+CustomButton(
+  semanticId: 'auth_sign_in_button', // ✅ Encontrable por Appium
+  onPressed: () async {},
+  text: strings.auth_sign_in,
+)
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Sin Semantics widget
+CustomButton(
+  onPressed: () async {},
+  text: strings.save,
+) // ❌ Falta semanticId
+
+// ❌ Identificador genérico
+Semantics(
+  identifier: 'button', // ❌ Muy genérico, puede duplicarse
+  child: CustomButton(...),
+)
+
+// ❌ Sin Key para widget interactivo
+TextField(
+  decoration: InputDecoration(labelText: strings.email),
+) // ❌ Falta key y Semantics
+
+// ❌ Identificador duplicado
+CustomButton(
+  semanticId: 'button', // ❌ Puede duplicarse
+  onPressed: () async {},
+  text: strings.save,
+)
+
+CustomButton(
+  semanticId: 'button', // ❌ Duplicado
+  onPressed: () async {},
+  text: strings.cancel,
+)
+
+// ❌ Sin label para screen readers
+Semantics(
+  identifier: 'search_button',
+  // ❌ Falta label
+  child: IconButton(icon: Icon(Icons.search), onPressed: () {}),
+)
+```
+
+## CORRECTO
+
+```dart
+// ✅ CustomButton con semanticId
+CustomButton(
+  key: const Key('auth_sign_in_button'),
+  semanticId: 'auth_sign_in_button', // ✅ Único y descriptivo
+  onPressed: () async {},
+  text: strings.auth_sign_in,
+)
+
+// ✅ TextField con Semantics
+Semantics(
+  identifier: 'login_email_field',
+  label: strings.email,
+  textField: true,
+  child: TextField(
+    key: const Key('login_email_field'),
+    decoration: InputDecoration(labelText: strings.email),
+  ),
+)
+
+// ✅ ListTile con Semantics
+Semantics(
+  identifier: 'stores_list_item_$storeId',
+  label: store.name,
+  child: ListTile(
+    key: Key('store_item_$storeId'),
+    title: Text(store.name),
+    onTap: () {},
+  ),
+)
+
+// ✅ IconButton con Semantics
+Semantics(
+  identifier: 'stores_search_button',
+  label: strings.search,
+  button: true,
+  child: IconButton(
+    key: const Key('stores_search_button'),
+    icon: const Icon(Icons.search),
+    onPressed: () {},
+  ),
+)
+
+// ✅ Image interactiva con Semantics
+Semantics(
+  identifier: 'splash_logo_image',
+  label: strings.app_logo,
+  image: true,
+  child: GestureDetector(
+    onTap: () {},
+    child: Image.asset(PathAssets.b2bWhite),
+  ),
+)
+```
+
+---
