@@ -1,6 +1,6 @@
 # CW Method RDD (Rules Driven Development)
 
-Sistema de especificaciones y reglas de desarrollo con soporte para agentes IA (Cursor, Windsurf, etc.)
+Sistema de especificaciones y reglas de desarrollo con soporte para agentes IA (Cursor)
 
 ## 🚀 Instalación
 
@@ -49,31 +49,6 @@ npx cw-method-rdd install --skip-config
 ✅ Configuración guardada en .cw-rdd.json
 ```
 
-### Configuración
-
-Crea un archivo `.cw-rdd.json` en la raíz de tu proyecto:
-
-```json
-{
-  "projectType": "frontend",
-  "version": "1.0.0",
-  "rules": {
-    "frontend": true,
-    "shared": true
-  }
-}
-```
-
-O agrega en tu `package.json`:
-
-```json
-{
-  "name": "mi-proyecto",
-  "cw-rdd": {
-    "projectType": "backend"
-  }
-}
-```
 
 ## 📂 Estructura Resultante
 
@@ -104,18 +79,8 @@ tu-proyecto/
 
 - **frontend**: React, Vue, Angular, Next.js, Nuxt
 - **backend**: Node.js, Express, NestJS, Fastify
-- **flutter**: Aplicaciones móviles con Flutter/Dart
+- **móvil**: Aplicaciones móviles con Flutter/Dart
 
-## 🔍 Detección Automática
-
-El sistema detecta automáticamente el tipo de proyecto según:
-
-1. Archivo `.cw-rdd.json`
-2. Campo `cw-rdd` en `package.json`
-3. Dependencias instaladas
-4. Archivo `pubspec.yaml` (Flutter)
-5. Estructura de carpetas
-6. Prompt interactivo (fallback)
 
 ## 🛠️ Comandos Disponibles
 
