@@ -4,11 +4,57 @@ Sistema de especificaciones y reglas de desarrollo con soporte para agentes IA (
 
 ## 🚀 Instalación
 
-### Instalación desde npm (cuando esté publicado)
+### Instalación desde npm
 
+Una vez publicado en npm, puedes instalarlo de dos formas:
+
+**Opción 1: Instalación local en el proyecto (recomendado)**
 ```bash
 npm install cw-method-rdd --save-dev
 ```
+
+**Opción 2: Instalación global**
+```bash
+npm install -g cw-method-rdd
+```
+
+**Uso después de la instalación:**
+
+```bash
+# Si se instaló localmente o sin instalar
+npx cw-method-rdd install
+
+# Si se instaló globalmente
+cw-method-rdd install
+
+# Con tipo específico
+npx cw-method-rdd install --type=flutter
+npx cw-method-rdd install --type=frontend
+npx cw-method-rdd install --type=backend
+```
+
+### 📦 Publicación en npm
+
+Para publicar el paquete en npm:
+
+```bash
+# 1. Asegúrate de estar autenticado en npm
+npm login
+
+# 2. Verifica que el nombre del paquete esté disponible
+npm view cw-method-rdd
+
+# 3. Publica el paquete
+npm publish
+
+# Para publicar una versión beta/pre-release
+npm publish --tag beta
+```
+
+**Antes de publicar, verifica:**
+- ✅ El `package.json` tiene la URL correcta del repositorio
+- ✅ El campo `files` incluye todos los archivos necesarios
+- ✅ La versión está actualizada según [Semantic Versioning](https://semver.org/)
 
 ### Prueba Local (Antes de Publicar)
 
@@ -42,14 +88,31 @@ O usa el script de prueba automático:
 
 ### Instalación de Reglas
 
+Después de instalar el paquete desde npm, puedes instalar las reglas en tu proyecto:
+
 ```bash
-# Instalación interactiva
+# Instalación interactiva (detecta automáticamente el tipo de proyecto)
 npx cw-method-rdd install
 
-# Instalación con tipo específico
+# Instalación con tipo específico (sin prompts)
 npx cw-method-rdd install --type=frontend
 npx cw-method-rdd install --type=backend
 npx cw-method-rdd install --type=flutter
+
+# Modo silencioso (usa configuración por defecto)
+npx cw-method-rdd install --silent
+
+# Sin guardar archivo de configuración
+npx cw-method-rdd install --skip-config
+```
+
+**Salida esperada:**
+```
+✅ 22 reglas de flutter instaladas
+✅ 3 reglas generales instaladas
+✅ 3 agentes instalados
+✅ hooks.json creado
+✅ Configuración guardada en .cw-rdd.json
 ```
 
 ### Configuración
@@ -140,6 +203,21 @@ npx cw-method-rdd --version
 
 # Ayuda
 npx cw-method-rdd --help
+```
+
+### 🔄 Actualizar el Paquete
+
+Para actualizar a la última versión después de publicar:
+
+```bash
+# Si se instaló localmente
+npm update cw-method-rdd
+
+# Si se instaló globalmente
+npm update -g cw-method-rdd
+
+# O reinstalar la última versión
+npm install cw-method-rdd@latest --save-dev
 ```
 
 ## 📚 Documentación

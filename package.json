@@ -29,9 +29,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/company/cw-method-rdd.git"
+    "url": "https://github.com/celuweb-tech/cw-method-rdd.git"
   },
-  "author": "Your Company",
+  "author": "Celuweb Tech",
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
