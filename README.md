@@ -33,56 +33,11 @@ npx cw-method-rdd install --type=frontend
 npx cw-method-rdd install --type=backend
 ```
 
-### 📦 Publicación en npm
-
-Para publicar el paquete en npm:
-
-```bash
-# 1. Asegúrate de estar autenticado en npm
-npm login
-
-# 2. Verifica que el nombre del paquete esté disponible
-npm view cw-method-rdd
-
-# 3. Publica el paquete
-npm publish
-
-# Para publicar una versión beta/pre-release
-npm publish --tag beta
-```
-
 **Antes de publicar, verifica:**
 - ✅ El `package.json` tiene la URL correcta del repositorio
 - ✅ El campo `files` incluye todos los archivos necesarios
 - ✅ La versión está actualizada según [Semantic Versioning](https://semver.org/)
 
-### Prueba Local (Antes de Publicar)
-
-Si quieres probar el paquete localmente antes de publicarlo en npm, consulta [PRUEBA_LOCAL.md](./PRUEBA_LOCAL.md) para instrucciones detalladas.
-
-**Método rápido con npm link:**
-
-```bash
-# 1. En el proyecto cw-method-rdd
-cd cw-method-rdd
-npm link
-
-# 2. En tu proyecto de prueba
-cd tu-proyecto
-npm link cw-method-rdd
-
-# 3. Probar
-npx cw-method-rdd install
-
-# 4. Desvincular cuando termines
-npm unlink cw-method-rdd
-```
-
-O usa el script de prueba automático:
-
-```bash
-./scripts/test-local.sh [ruta-al-proyecto-prueba]
-```
 
 ## 📖 Uso
 
