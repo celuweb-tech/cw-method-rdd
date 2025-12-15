@@ -2,23 +2,7 @@
 
 Sistema de especificaciones y reglas de desarrollo con soporte para agentes IA (Cursor)
 
-## 🚀 Instalación
-
-### Instalación desde npm
-
-Una vez publicado en npm, puedes instalarlo de dos formas:
-
-**Opción 1: Instalación local en el proyecto (recomendado)**
-```bash
-npm install cw-method-rdd --save-dev
-```
-
-**Opción 2: Instalación global**
-```bash
-npm install -g cw-method-rdd
-```
-
-## 📖 Uso
+## 🚀 Instalación y uso 
 
 ### Instalación de Reglas
 
