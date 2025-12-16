@@ -1,6 +1,6 @@
 {
   "name": "cw-method-rdd",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "CW Method RDD - Rules Driven Development para desarrollo con IA",
   "main": "lib/index.js",
   "bin": {
