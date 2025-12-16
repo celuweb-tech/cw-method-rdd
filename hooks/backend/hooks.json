@@ -1,0 +1,11 @@
+{
+    "pre-commit": [
+        "Verifica que el código cumple con las reglas en .cursor/rules/",
+        "Ejecuta linters y formatters configurados",
+        "Valida que no hay console.log en código de producción"
+    ],
+    "pre-push": [
+        "Ejecuta suite de tests unitarios",
+        "Verifica cobertura mínima de tests (80%)"
+    ]
+}

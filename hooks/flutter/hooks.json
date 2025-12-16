@@ -1,0 +1,22 @@
+{
+    "version": 1,
+    "hooks": {
+        "afterFileEdit": [
+            {
+                "files": [
+                    "lib/l10n/app_en.arb",
+                    "lib/l10n/app_es.arb"
+                ],
+                "command": "flutter gen-l10n"
+            },
+            {
+                "files": [
+                    "lib/**/*_model.dart",
+                    "lib/**/*_entity.dart",
+                    "lib/**/*_controller.dart"
+                ],
+                "command": "dart run build_runner build --delete-conflicting-outputs"
+            }
+        ]
+    }
+}
