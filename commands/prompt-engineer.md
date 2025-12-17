@@ -123,11 +123,13 @@ prompt-framework:
     
     objective: |
       Define claramente qué se debe lograr.
-      Debe ser: específico, medible, alcanzable
+      Debe ser: específico, medible, alcanzable.
+      **IMPORTANTE**: Especificar que la historia/tarea se debe refinar DIRECTAMENTE en Azure DevOps.
     
     instructions: |
       Pasos claros y ordenados para completar la tarea.
-      Usar verbos de acción, ser específico, evitar ambigüedades
+      Usar verbos de acción, ser específico, evitar ambigüedades.
+      **IMPORTANTE**: Indicar explícitamente "NO crear archivos, actualizar Azure DevOps directamente".
     
     format: |
       Especifica cómo debe estructurarse la respuesta.

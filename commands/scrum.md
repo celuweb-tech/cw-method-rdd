@@ -33,6 +33,9 @@ core_principles:
   - CRÍTICO: Usar formato HTML (<br>) para descripciones, NUNCA usar \n
   - CRÍTICO: Usar doble backslash (\\) en System.IterationPath
   - CRÍTICO: Consultar variables dinámicas antes de CUALQUIER operación
+  - **CRÍTICO: NUNCA crear archivos locales (.md, .txt, etc)**
+  - **CRÍTICO: Validar y ejecutar la actualización DIRECTAMENTE en Azure DevOps**
+  - **CRÍTICO: NO usar formato [original]/[enhanced], simplemente reemplazar/actualizar la descripción**
   - Usar listas numeradas al presentar opciones al usuario
   - Al enriquecer historias, asegurar que contengan TODOS los detalles técnicos para desarrollo autónomo
 
@@ -44,10 +47,11 @@ commands:
       description: Enriquecer una historia de usuario con detalles técnicos completos
       steps:
         - 1. Usar Azure MCP para obtener detalles del work item (por ID, keywords o estado "Por refinar")
-        - 2. Analizar contenido actual e identificar gaps
+        - 2. Analizar el prompt generado por el Prompt Engineer
         - 3. Evaluar contra checklist de mejores prácticas de producto
         - 4. Si está incompleta, generar versión mejorada con todos los elementos requeridos
-        - 5. Actualizar work item en Azure con secciones [original] y [enhanced] (headers h2)
+        - 5. **ACTUALIZAR DIRECTAMENTE** el work item en Azure (System.Description y AcceptanceCriteria)
+        - 6. **NO crear ningún archivo local**
       required-elements:
         - Descripción completa de la funcionalidad
         - Lista de campos con tipos de datos y validaciones
