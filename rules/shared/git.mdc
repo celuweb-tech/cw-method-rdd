@@ -16,6 +16,7 @@ alwaysApply: true
 - NUNCA hacer commit sin validar formato y análisis estático
 - NUNCA hacer commit sin vincular con tarea (excepto WIP)
 - NUNCA omitir el push después del commit
+- **NUNCA hacer commit con imports no usados o errores de linter**
 
 ## Formato de Commits
 

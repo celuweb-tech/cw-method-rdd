@@ -129,6 +129,41 @@ test/
 
 **Dependencias permitidas:** ✅ Domain layer (entities, use cases, repository interfaces)
 
+#### Presentation Layer Rules (UI)
+
+> [!IMPORTANT]
+> **WIDGET EXTRACTION**: SIEMPRE extraer componentes de UI como Widgets separados (`StatelessWidget`/`StatefulWidget`), NUNCA como métodos helpers (`_buildLoader`).
+
+1. **Extract as Widget**:
+   - ✅ `class MyWidget extends StatelessWidget { ... }`
+   - ❌ `Widget _buildMyWidget() { ... }`
+   - **Razón**: Flutter optimiza rebuilds a nivel de widget. Los métodos reconstruyen todo el padre.
+
+2. **Use const Constructors**:
+   - SIEMPRE usar `const` en constructores cuando sea posible.
+   - Mejora drásticamente el performance al evitar reconstrucciones innecesarias.
+
+3. **Pass Data via Constructor**:
+   - Evitar acceder a variables del padre directamente. Pasar datos explícitamente.
+
+```dart
+// ✅ CORRECTO - Widget extraído
+class UserCard extends StatelessWidget {
+  const UserCard({super.key, required this.user});
+  final User user;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Card(child: Text(user.name));
+  }
+}
+
+// ❌ INCORRECTO - Método helper
+Widget _buildUserCard(User user) {
+  return Card(child: Text(user.name));
+}
+```
+
 ```dart
 @riverpod
 class StoresController extends _$StoresController {

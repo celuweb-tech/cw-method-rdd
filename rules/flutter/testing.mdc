@@ -1,6 +1,6 @@
 ---
-version: 1.0.0
-description: Reglas de testing - TDD obligatorio con estructura y convenciones estrictas
+version: 2.0.0
+description: Reglas de testing - Test-First con patrones exactos, sin iteración
 globs:
   - "test/**/*.dart"
   - "lib/**/*.dart"
@@ -9,483 +9,552 @@ alwaysApply: true
 
 # Reglas de Testing
 
-- SIEMPRE seguir TDD (Test-Driven Development): 🔴 RED → 🟢 GREEN → 🔵 REFACTOR
-- SIEMPRE mantener ≥85% coverage en módulos críticos
-- SIEMPRE usar formato Given-When-Then para la estructura del test
-- SIEMPRE usar Mockito con `@GenerateNiceMocks` para mocks
-- SIEMPRE usar `ProviderContainer` para testing de Riverpod providers
-- SIEMPRE seguir estructura espejo de `lib/` en `test/`
-- NUNCA escribir código sin test primero (TDD)
-- NUNCA hardcodear valores en tests sin contexto claro
-- NUNCA omitir tests para Use Cases, Repositories y Controllers
+## Estrategia (OBLIGATORIO)
 
-## Test-Driven Development (TDD) - MANDATORY
+> **TEST-FIRST SIN ITERACIÓN**: Escribir tests correctos A LA PRIMERA usando los patrones de este documento.
+>
+> 1. **IDENTIFICAR**: Qué componente es
+> 2. **COPIAR PATRÓN**: Usar el patrón EXACTO de esta guía
+> 3. **ADAPTAR**: Solo cambiar nombres y datos específicos
+> 4. **EJECUTAR**: `flutter test` una sola vez
 
-**DEBE** seguir el ciclo TDD estrictamente:
+**⛔ PROHIBIDO ITERAR**: NO experimentar con sintaxis alternativas.
 
-```
-🔴 RED → 🟢 GREEN → 🔵 REFACTOR
-```
+## Reglas Fundamentales
 
-1. **🔴 RED:** Escribir test que falle
-2. **🟢 GREEN:** Escribir código mínimo para pasar el test
-3. **🔵 REFACTOR:** Mejorar código manteniendo tests pasando
+- SIEMPRE usar `ResultFactory.success()` / `ResultFactory.failure()` 
+- SIEMPRE usar `HttpRequestFailure` (`.network()`, `.server()`, `.badRequest()`, `.unauthorized()`, `.validation()`)
+- SIEMPRE usar `addTearDown(container.dispose)` para ProviderContainer
+- NUNCA usar `Right`/`Left` de dartz
+- NUNCA iterar buscando sintaxis
 
-```dart
-// 1. 🔴 RED - Test primero (falla)
-test('Given valid store ID, when getStoreById is called, then should return StoreEntity', () {
-  final result = repository.getStoreById('123');
-  expect(result, isA<StoreEntity>());
-});
+## Qué DEBE Tener Tests
 
-// 2. 🟢 GREEN - Implementación mínima
-class StoresRepository {
-  StoreEntity getStoreById(String id) {
-    return StoreEntity(id: id, name: '');
-  }
-}
+| Componente | ¿Test? |
+|------------|--------|
+| Use Cases | ✅ SÍ |
+| Repositories Impl | ✅ SÍ |
+| Controllers | ✅ SÍ |
+| Providers | ✅ SÍ |
+| Models | ✅ SÍ |
+| Entities | ✅ SÍ |
+| Pages | ✅ SÍ |
+| DataSources | ✅ SÍ |
+| Widgets con lógica | ✅ SÍ |
 
-// 3. 🔵 REFACTOR - Mejorar manteniendo test pasando
-class StoresRepository {
-  final StoresDataSource _dataSource;
-  
-  StoreEntity getStoreById(String id) {
-    final model = _dataSource.getStore(id);
-    return model.toEntity();
-  }
-}
-```
+## Qué NO Requiere Tests
 
-## Test Coverage (MANDATORY)
+- `main.dart`
+- Archivos generados (`*.g.dart`, `*.freezed.dart`)
+- Contratos/Interfaces (Repository abstracto, DataSource abstracto)
+- Widgets 100% estáticos
 
-- **DEBE** mantener ≥85% coverage en módulos críticos
-- **DEBE** ejecutar `flutter test --coverage` antes de cada commit
-- **DEBE** validar coverage con:
-  ```bash
-  lcov --summary coverage/lcov.info
-  ```
+---
 
-## Qué DEBE Tener Tests (MANDATORY)
+# PATRONES EXACTOS
 
-✅ **MANDATORY Tests:**
-
-1. **Use Cases** (Domain Layer)
-   - Todos los casos de éxito
-   - Todos los casos de error
-   - Validaciones de entrada
-
-2. **Repositories** (Data Layer)
-   - Transformación Model → Entity
-   - Manejo de errores de API
-   - Casos edge (lista vacía, null, etc.)
-
-3. **Controllers** (Presentation Layer)
-   - Flujo completo de estados (loading → success → error)
-   - Actualización de estado
-   - Llamadas a use cases
-
-4. **Data Sources** (Data Layer - si tienen lógica)
-   - Solo si tienen transformaciones o lógica compleja
-   - Mocks pueden ser suficientes para data sources simples
-
-## Qué NO Debe Tener Tests
-
-❌ **NO Tests Required:**
-
-1. **Models** (freezed/json_serializable)
-   - Código autogenerado no requiere tests
-   - `freezed` garantiza immutability
-   - `json_serializable` garantiza serialización
-
-2. **Entities** (freezed)
-   - Código autogenerado
-   - Sin lógica de negocio
-
-3. **Widgets Simples**
-   - Widgets sin lógica (solo UI)
-   - Layouts estáticos
-   - Widgets que solo usan `const`
-
-4. **Main.dart**
-   - Entry point de la app
-   - Difícil de testear
-
-5. **Generated Code**
-   - `*.g.dart`, `*.freezed.dart`
-   - Autogenerado por build_runner
-
-## Test Naming Convention (MANDATORY)
-
-**DEBE** usar formato **Given-When-Then**:
+## 1. Entity Test
 
 ```dart
-test(
-  'Given valid store ID, when getStoreById is called, then should return StoreEntity',
-  () async {
-    // Given
-    const storeId = '123';
-    when(mockDataSource.getStore(storeId))
-        .thenAnswer((_) async => mockStoreModel);
+import 'package:flutter_test/flutter_test.dart';
 
-    // When
-    final result = await repository.getStoreById(storeId);
-
-    // Then
-    expect(result, isA<StoreEntity>());
-    expect(result.id, storeId);
-    verify(mockDataSource.getStore(storeId)).called(1);
-  },
-);
-```
-
-**Formato del nombre:**
-```
-Given [precondition], when [action], then [expected result]
-```
-
-## Test Structure (MANDATORY)
-
-```dart
-@GenerateNiceMocks([MockSpec<Dependency>()])
 void main() {
-  group('ClassName', () {
-    late ClassUnderTest sut; // System Under Test
-    late MockDependency mockDependency;
+  group('StoreEntity', () {
+    test('Given values, when created, then should have correct properties', () {
+      //Given
+      //When
+      const entity = StoreEntity(id: '1', name: 'Store', city: 'Bogotá');
 
-    setUp(() {
-      mockDependency = MockDependency();
-      sut = ClassUnderTest(mockDependency);
+      //Then
+      expect(entity.id, equals('1'));
+      expect(entity.name, equals('Store'));
     });
 
-    test('Given [precondition], when [action], then [expected result]', () {
-      // Given - Setup
-      
-      // When - Action
-      
-      // Then - Assertions
-      
-      // Verify - Mock interactions
+    test('Given same values, when compared, then should be equal', () {
+      //Given
+      const entity1 = StoreEntity(id: '1', name: 'Store', city: 'Bogotá');
+      const entity2 = StoreEntity(id: '1', name: 'Store', city: 'Bogotá');
+
+      //Then
+      expect(entity1, equals(entity2));
+    });
+
+    test('Given entity, when copyWith, then should update specified fields', () {
+      //Given
+      const entity = StoreEntity(id: '1', name: 'Store', city: 'Bogotá');
+
+      //When
+      final updated = entity.copyWith(name: 'New Store');
+
+      //Then
+      expect(updated.id, equals('1'));
+      expect(updated.name, equals('New Store'));
     });
   });
 }
 ```
 
-## Mocking with Mockito (MANDATORY)
-
-**DEBE** usar `@GenerateNiceMocks` para crear mocks:
+## 2. Model Test
 
 ```dart
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('StoreModel', () {
+    test('Given JSON, when fromJson, then should create model', () {
+      //Given
+      final json = {'id': 1, 'name': 'Store', 'city': 'Bogotá'};
+
+      //When
+      final model = StoreModel.fromJson(json);
+
+      //Then
+      expect(model.id, equals(1));
+      expect(model.name, equals('Store'));
+    });
+
+    test('Given model, when toJson, then should create correct map', () {
+      //Given
+      const model = StoreModel(id: 1, name: 'Store', city: 'Bogotá');
+
+      //When
+      final json = model.toJson();
+
+      //Then
+      expect(json['id'], equals(1));
+      expect(json['name'], equals('Store'));
+    });
+
+    test('Given model, when toEntity, then should map correctly', () {
+      //Given
+      const model = StoreModel(id: 1, name: 'Store', city: 'Bogotá');
+
+      //When
+      final entity = model.toEntity();
+
+      //Then
+      expect(entity, isA<StoreEntity>());
+      expect(entity.id, equals('1'));
+    });
+  });
+}
+```
+
+## 3. UseCase Test
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
-import 'my_test.mocks.dart';
+import 'get_stores_usecase_test.mocks.dart';
 
-@GenerateNiceMocks([
-  MockSpec<StoresRepository>(),
-  MockSpec<SecureStorageService>(),
-])
+@GenerateNiceMocks([MockSpec<StoresRepository>()])
 void main() {
-  late MockStoresRepository mockRepository;
+  group('GetStoresUseCase', () {
+    late GetStoresUseCase useCase;
+    late MockStoresRepository mockRepository;
 
-  setUp(() {
-    mockRepository = MockStoresRepository();
-  });
+    setUp(() {
+      mockRepository = MockStoresRepository();
+      useCase = GetStoresUseCase(mockRepository);
+    });
 
-  test('Given empty repository, when getStores is called, then should return empty list', () {
-    // Given
-    when(mockRepository.getStores())
-        .thenAnswer((_) async => []);
+    test('Given stores exist, when called, then should return success', () async {
+      //Given
+      when(mockRepository.getStores()).thenAnswer(
+        (_) async => ResultFactory.success(mockResponse),
+      );
 
-    // When
-    final result = await useCase();
+      //When
+      final result = await useCase();
 
-    // Then
-    verify(mockRepository.getStores()).called(1);
-    verifyNoMoreInteractions(mockRepository);
+      //Then
+      expect(result.isSuccess, true);
+      verify(mockRepository.getStores()).called(1);
+    });
+
+    test('Given network error, when called, then should return failure', () async {
+      //Given
+      when(mockRepository.getStores()).thenAnswer(
+        (_) async => ResultFactory.failure(const HttpRequestFailure.network()),
+      );
+
+      //When
+      final result = await useCase();
+
+      //Then
+      expect(result.isFailure, true);
+    });
   });
 }
 ```
 
-**Después de agregar mocks, regenerar:**
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-## Testing Riverpod Providers (MANDATORY)
-
-**DEBE** usar `ProviderContainer` con overrides:
+## 4. Repository Test
 
 ```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+import 'stores_repository_impl_test.mocks.dart';
+
+@GenerateNiceMocks([MockSpec<StoresRemoteDataSource>()])
 void main() {
-  group('MyController', () {
-    late ProviderContainer container;
-    late MockUseCase mockUseCase;
+  group('StoresRepositoryImpl', () {
+    late StoresRepositoryImpl repository;
+    late MockStoresRemoteDataSource mockDataSource;
 
     setUp(() {
-      mockUseCase = MockUseCase();
-      
-      // ✅ Crear container raíz con overrides
-      container = ProviderContainer(
-        overrides: [
-          useCaseProvider.overrideWithValue(mockUseCase),
-        ],
+      mockDataSource = MockStoresRemoteDataSource();
+      repository = StoresRepositoryImpl(mockDataSource);
+    });
+
+    test('Given datasource returns data, when getStores, then should return success', () async {
+      //Given
+      when(mockDataSource.getStores()).thenAnswer((_) async => mockResponse);
+
+      //When
+      final result = await repository.getStores();
+
+      //Then
+      expect(result.isSuccess, true);
+      verify(mockDataSource.getStores()).called(1);
+    });
+
+    test('Given datasource throws, when getStores, then should return failure', () async {
+      //Given
+      when(mockDataSource.getStores()).thenThrow(Exception('Error'));
+
+      //When
+      final result = await repository.getStores();
+
+      //Then
+      expect(result.isFailure, true);
+      expect(result.failure, isA<HttpRequestFailure>());
+    });
+  });
+}
+```
+
+## 5. DataSource Test
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+import 'stores_remote_data_source_test.mocks.dart';
+
+@GenerateNiceMocks([MockSpec<Dio>()])
+void main() {
+  group('StoresRemoteDataSource', () {
+    late StoresRemoteDataSource dataSource;
+    late MockDio mockDio;
+
+    setUp(() {
+      mockDio = MockDio();
+      dataSource = StoresRemoteDataSource(mockDio);
+    });
+
+    test('Given successful response, when getStores, then should return model', () async {
+      //Given
+      when(mockDio.post(any, data: anyNamed('data'))).thenAnswer(
+        (_) async => Response(
+          data: responseData,
+          statusCode: 200,
+          requestOptions: RequestOptions(path: ''),
+        ),
       );
+
+      //When
+      final result = await dataSource.getStores();
+
+      //Then
+      expect(result, isA<StoresResponseModel>());
+    });
+
+    test('Given DioException, when getStores, then should throw', () async {
+      //Given
+      when(mockDio.post(any, data: anyNamed('data'))).thenThrow(
+        DioException(requestOptions: RequestOptions(path: '')),
+      );
+
+      //Then
+      expect(() => dataSource.getStores(), throwsA(isA<DioException>()));
+    });
+  });
+}
+```
+
+## 6. Controller Test
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+import 'stores_controller_test.mocks.dart';
+
+@GenerateNiceMocks([MockSpec<GetStoresUseCase>()])
+void main() {
+  group('StoresController', () {
+    late MockGetStoresUseCase mockUseCase;
+
+    setUp(() {
+      mockUseCase = MockGetStoresUseCase();
+    });
+
+    test('Given controller created, when read, then initial state is loading', () {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.success(mockResponse));
+
+      final container = ProviderContainer(
+        overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+      );
+      addTearDown(container.dispose);
+
+      //When
+      final state = container.read(controllerProvider);
+
+      //Then
+      expect(state.isLoading, true);
+    });
+
+    test('Given success, when loadStores, then state has data', () async {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.success(mockResponse));
+
+      final container = ProviderContainer(
+        overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+      );
+      addTearDown(container.dispose);
+
+      //When
+      await container.read(controllerProvider.notifier).loadStores();
+      final state = container.read(controllerProvider);
+
+      //Then
+      expect(state.isLoading, false);
+      expect(state.stores, isNotEmpty);
+    });
+
+    test('Given failure, when loadStores, then state has error', () async {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.failure(const HttpRequestFailure.network()));
+
+      final container = ProviderContainer(
+        overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+      );
+      addTearDown(container.dispose);
+
+      //When
+      await container.read(controllerProvider.notifier).loadStores();
+      final state = container.read(controllerProvider);
+
+      //Then
+      expect(state.error, isNotNull);
+    });
+  });
+}
+```
+
+## 7. Providers Test
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('Providers', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer();
     });
 
     tearDown(() {
-      container.dispose(); // ✅ Siempre dispose
+      container.dispose();
     });
 
-    test('Given valid data, when loadData is called, then should update state', () async {
-      // Given
-      when(mockUseCase()).thenAnswer((_) async => data);
+    test('Given provider, when read, then should return correct type', () {
+      //When
+      final dataSource = container.read(dataSourceProvider);
+      final repository = container.read(repositoryProvider);
+      final useCase = container.read(useCaseProvider);
 
-      // When
-      final controller = container.read(myControllerProvider.notifier);
-      await controller.loadData();
+      //Then
+      expect(dataSource, isA<StoresRemoteDataSource>());
+      expect(repository, isA<StoresRepositoryImpl>());
+      expect(useCase, isA<GetStoresUseCase>());
+    });
 
-      // Then
-      final state = container.read(myControllerProvider);
-      expect(state.data, equals(data));
+    test('Given provider, when read twice, then should return same instance', () {
+      //When
+      final instance1 = container.read(repositoryProvider);
+      final instance2 = container.read(repositoryProvider);
+
+      //Then
+      expect(identical(instance1, instance2), isTrue);
     });
   });
 }
 ```
 
-## Widget Testing (MANDATORY)
-
-Para widgets que usan Riverpod:
+## 8. Page Test
 
 ```dart
-testWidgets('Given stores data, when StoresPage is displayed, then should show store names', (tester) async {
-  // Given
-  when(mockUseCase()).thenAnswer((_) async => stores);
-  
-  final container = ProviderContainer(
-    overrides: [
-      useCaseProvider.overrideWithValue(mockUseCase),
-    ],
-  );
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 
-  // When
-  await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(home: StoresPage()),
-    ),
-  );
-  
-  await tester.pumpAndSettle();
+import 'stores_page_test.mocks.dart';
 
-  // Then
-  expect(find.text('Store Name'), findsOneWidget);
-  
-  container.dispose();
-});
-```
-
-## Test Organization (MANDATORY)
-
-**DEBE** seguir estructura espejo de `lib/`:
-
-```
-test/
-├── features/
-│   └── stores/
-│       ├── data/
-│       │   ├── datasources/
-│       │   │   └── stores_remote_data_source_test.dart
-│       │   └── repositories/
-│       │       └── stores_repository_impl_test.dart
-│       ├── domain/
-│       │   └── usecases/
-│       │       └── get_stores_usecase_test.dart
-│       └── presentation/
-│           ├── controllers/
-│           │   └── stores_controller_test.dart
-│           └── pages/
-│               └── stores_page_test.dart
-└── core/
-    └── errors/
-        └── error_handler_test.dart
-```
-
-**Naming:** `[archivo]_test.dart` (ej: `store_model_test.dart`)
-
-## Testing Result Pattern
-
-```dart
-test('Given valid data, when getData is called, then should return Right with data', () async {
-  // Given
-  when(mockDataSource.getData())
-      .thenAnswer((_) async => mockData);
-
-  // When
-  final result = await repository.getData();
-
-  // Then
-  expect(result, isA<Right>());
-  expect(result.isSuccess, isTrue);
-  result.fold(
-    (failure) => fail('Expected Right but got Left'),
-    (data) => expect(data, equals(mockData)),
-  );
-});
-
-test('Given network error, when getData is called, then should return Left with failure', () async {
-  // Given
-  when(mockDataSource.getData())
-      .thenThrow(Exception('Network error'));
-
-  // When
-  final result = await repository.getData();
-
-  // Then
-  expect(result, isA<Left>());
-  expect(result.isFailure, isTrue);
-  result.fold(
-    (failure) => expect(failure, isA<HttpRequestFailure>()),
-    (data) => fail('Expected Left but got Right'),
-  );
-});
-```
-
-## Testing State Transitions
-
-```dart
-test('Given initial state, when loadData is called, then should transition from loading to success', () async {
-  // Given
-  when(mockUseCase()).thenAnswer((_) async => data);
-  
-  final container = ProviderContainer(
-    overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
-  );
-
-  // When
-  final controller = container.read(controllerProvider.notifier);
-  
-  // Initial state
-  expect(container.read(controllerProvider).isLoading, isTrue);
-  
-  await controller.loadData();
-  
-  // Then - Final state
-  final state = container.read(controllerProvider);
-  expect(state.isLoading, isFalse);
-  expect(state.data, equals(data));
-  expect(state.error, isNull);
-  
-  container.dispose();
-});
-```
-
-## PROHIBIDO
-
-```dart
-// NUNCA hacer esto:
-test('test', () { // Nombre sin formato Given-When-Then
-  // ...
-});
-
-test('should work', () { // Nombre vago
-  // ...
-});
-
-// Crear mocks manualmente sin @GenerateNiceMocks
-class MockRepository extends Mock implements Repository {}
-
-// No usar ProviderContainer para Riverpod
-test('controller test', () {
-  final controller = MyController(); // Sin container
-});
-
-// Tests sin estructura Given-When-Then
-test('get stores', () {
-  final result = repository.getStores(); // Sin setup claro
-  expect(result, isNotNull); // Sin verificación adecuada
-});
-
-// No hacer dispose de containers
-final container = ProviderContainer();
-// ... tests ...
-// ❌ Falta container.dispose();
-
-// Hardcodear valores sin contexto
-test('test', () {
-  expect(result.id, '123'); // ¿Por qué '123'?
-});
-
-// Omitir tests para Use Cases/Repositories/Controllers
-// ❌ No crear test para GetStoresUseCase
-```
-
-## CORRECTO
-
-```dart
-// Usar formato Given-When-Then
-test('Given valid store ID, when getStoreById is called, then should return StoreEntity', () {
-  // Given
-  const storeId = '123';
-  when(mockDataSource.getStore(storeId))
-      .thenAnswer((_) async => mockStoreModel);
-
-  // When
-  final result = await repository.getStoreById(storeId);
-
-  // Then
-  expect(result, isA<StoreEntity>());
-  expect(result.id, storeId);
-  verify(mockDataSource.getStore(storeId)).called(1);
-});
-
-// Usar @GenerateNiceMocks
-@GenerateNiceMocks([MockSpec<StoresRepository>()])
+@GenerateNiceMocks([MockSpec<GetStoresUseCase>()])
 void main() {
-  late MockStoresRepository mockRepository;
-  // ...
-}
+  group('StoresPage', () {
+    late MockGetStoresUseCase mockUseCase;
 
-// Usar ProviderContainer para Riverpod
-void main() {
-  late ProviderContainer container;
-  
-  setUp(() {
-    container = ProviderContainer(
-      overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
-    );
-  });
-  
-  tearDown(() {
-    container.dispose(); // ✅ Siempre dispose
+    setUp(() {
+      mockUseCase = MockGetStoresUseCase();
+    });
+
+    Widget createWidget() {
+      return ProviderScope(
+        overrides: [useCaseProvider.overrideWithValue(mockUseCase)],
+        child: const MaterialApp(home: StoresPage()),
+      );
+    }
+
+    testWidgets('Given error, when rendered, then shows error state', (tester) async {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.failure(const HttpRequestFailure.network()));
+
+      //When
+      await tester.pumpWidget(createWidget());
+      await tester.pumpAndSettle();
+
+      //Then
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    });
+
+    testWidgets('Given empty, when rendered, then shows empty state', (tester) async {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.success(emptyResponse));
+
+      //When
+      await tester.pumpWidget(createWidget());
+      await tester.pumpAndSettle();
+
+      //Then
+      expect(find.byType(EmptyStateWidget), findsOneWidget);
+    });
+
+    testWidgets('Given data, when rendered, then shows list', (tester) async {
+      //Given
+      when(mockUseCase(
+        page: anyNamed('page'),
+        pageSize: anyNamed('pageSize'),
+        searchQuery: anyNamed('searchQuery'),
+      )).thenAnswer((_) async => ResultFactory.success(mockResponse));
+
+      //When
+      await tester.pumpWidget(createWidget());
+      await tester.pumpAndSettle();
+
+      //Then
+      expect(find.byType(ListView), findsOneWidget);
+    });
   });
 }
+```
 
-// Estructura clara con Given-When-Then
-test('Given empty list, when getStores is called, then should return empty list', () {
-  // Given
-  when(mockRepository.getStores()).thenAnswer((_) async => []);
-  
-  // When
-  final result = await useCase();
-  
-  // Then
-  expect(result, isEmpty);
-});
+## 9. Widget Test
 
-// Valores con contexto claro
-test('Given store with ID 123, when getStoreById is called, then should return store with ID 123', () {
-  // Given
-  const expectedStoreId = '123';
-  final mockStore = StoreModel(id: 123, name: 'Test Store');
-  when(mockDataSource.getStore(expectedStoreId))
-      .thenAnswer((_) async => mockStore);
-  
-  // When
-  final result = await repository.getStoreById(expectedStoreId);
-  
-  // Then
-  expect(result.id, expectedStoreId);
-});
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('StoreCard', () {
+    testWidgets('Given store, when rendered, then shows store info', (tester) async {
+      //Given
+      const store = StoreEntity(id: '1', name: 'Test Store', city: 'Bogotá');
+
+      //When
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: StoreCard(store: store))),
+      );
+
+      //Then
+      expect(find.text('Test Store'), findsOneWidget);
+      expect(find.text('Bogotá'), findsOneWidget);
+    });
+
+    testWidgets('Given store, when tapped, then calls onTap', (tester) async {
+      //Given
+      var tapped = false;
+      const store = StoreEntity(id: '1', name: 'Test', city: 'Bogotá');
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StoreCard(store: store, onTap: () => tapped = true),
+          ),
+        ),
+      );
+
+      //When
+      await tester.tap(find.byType(StoreCard));
+
+      //Then
+      expect(tapped, isTrue);
+    });
+  });
+}
 ```
 
 ---
+
+# PROHIBIDO
+
+```dart
+// ❌ NO usar dartz
+Right(data) / Left(failure)
+result.fold(...)
+
+// ❌ NO olvidar dispose
+final container = ProviderContainer();
+// Sin addTearDown(container.dispose)
+
+// ❌ NO usar thenReturn para Futures
+when(mock.method()).thenReturn(data); // Usar thenAnswer
+
+// ❌ NO verificar antes de ejecutar
+verify(mock.method()).called(1);
+await sut.method(); // Orden incorrecto
+```
