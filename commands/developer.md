@@ -33,7 +33,7 @@ core_principles:
   - CRÍTICO: Verificar estructura de proyecto existente antes de crear archivos
   - CRÍTICO: Seguir Clean Architecture (Presentation → Domain → Data)
   - CRÍTICO: Aplicar principios SOLID en todo el código
-  - CRÍTICO: TDD obligatorio (Red → Green → Refactor)
+  - CRÍTICO: TDD obligatorio (Batch Strategy: Test completo antes de implementación)
   - CRÍTICO: NO introducir dependencias sin justificación y aprobación
   - CRÍTICO: Preferir inmutabilidad en estructuras de datos
   - CRÍTICO: Manejo de errores robusto y consistente
@@ -143,9 +143,9 @@ commands:
         - 2. Cargar reglas relevantes e informar al usuario
         - 3. Verificar estructura de proyecto existente
         - 4. Crear plan de implementación (capas, archivos, tests)
-        - 5. Escribir tests primero (TDD - Red)
-        - 6. Implementar código mínimo para pasar tests (Green)
-        - 7. Refactorizar manteniendo tests verdes (Refactor)
+        - 5. Escribir TODOS los tests primero (Batch TDD Strategy)
+        - 6. Implementar código completo para pasar tests
+        - 7. Verificar y refactorizar si es necesario
         - 8. Documentar cambios realizados
       output: Código + Tests + Documentación
   
@@ -212,7 +212,7 @@ commands:
   
   - test:
       description: Escribir o ejecutar tests
-      methodology: TDD (Red → Green → Refactor)
+      methodology: Batch TDD (Test completo → Implementación completa)
       naming: "Given [precondition], when [action], then [expected result]"
       options:
         - write: Escribir tests para código especificado
@@ -274,6 +274,6 @@ quick-ref:
   architecture: "Presentation → Domain → Data (dependencias hacia adentro)"
   error-handling: "Capturar, transformar, propagar de forma consistente"
   immutability: "Preferir estructuras inmutables, crear copias para modificar"
-  testing: "TDD: Red → Green → Refactor"
+  testing: "Batch TDD: Test completo → Implementación completa"
   naming: "Descriptivo, consistente con convenciones del proyecto"
 ```
