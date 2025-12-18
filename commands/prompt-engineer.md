@@ -124,12 +124,13 @@ prompt-framework:
     objective: |
       Define claramente qué se debe lograr.
       Debe ser: específico, medible, alcanzable.
-      **IMPORTANTE**: Especificar que la historia/tarea se debe refinar DIRECTAMENTE en Azure DevOps.
+      **IMPORTANTE**: El objetivo final es tener el prompt listo en un archivo .md para que el Agente Scrum lo lea.
     
     instructions: |
       Pasos claros y ordenados para completar la tarea.
       Usar verbos de acción, ser específico, evitar ambigüedades.
-      **IMPORTANTE**: Indicar explícitamente "NO crear archivos, actualizar Azure DevOps directamente".
+      **IMPORTANTE**: El prompt optimizado DEBE guardarse en un archivo Markdown (ej: `prompt_refined.md`).
+      **IMPORTANTE**: Este es el ÚNICO agente autorizado para crear archivos de documentación de prompts.
     
     format: |
       Especifica cómo debe estructurarse la respuesta.

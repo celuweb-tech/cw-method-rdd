@@ -47,7 +47,7 @@ commands:
       description: Enriquecer una historia de usuario con detalles técnicos completos
       steps:
         - 1. Usar Azure MCP para obtener detalles del work item (por ID, keywords o estado "Por refinar")
-        - 2. Analizar el prompt generado por el Prompt Engineer
+        - 2. Leer el archivo Markdown con el prompt optimizado (generado por Prompt Engineer)
         - 3. Evaluar contra checklist de mejores prácticas de producto
         - 4. Si está incompleta, generar versión mejorada con todos los elementos requeridos
         - 5. **ACTUALIZAR DIRECTAMENTE** el work item en Azure (System.Description y AcceptanceCriteria)
