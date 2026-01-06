@@ -1,0 +1,233 @@
+---
+version: 1.0.0
+description: Manejo de Assets - Estructura, PathAssets, imágenes, iconos, fuentes
+globs:
+  - "lib/**/*.dart"
+  - "pubspec.yaml"
+alwaysApply: true
+---
+
+# Manejo de Assets
+
+- SIEMPRE colocar assets en `lib/shared/assets/` con subdirectorios `images/`, `icons/`, `fonts/`
+- SIEMPRE declarar assets en `pubspec.yaml` bajo la sección `flutter: assets:`
+- SIEMPRE usar `PathAssets` para referenciar rutas de assets (nunca hardcodear rutas)
+- SIEMPRE usar nombres descriptivos en snake_case para archivos de assets
+- SIEMPRE declarar fuentes en `pubspec.yaml` bajo la sección `flutter: fonts:`
+- SIEMPRE usar `Image.asset()` con rutas de `PathAssets`
+- SIEMPRE usar dimensiones responsive con `responsive.dp()` para assets
+- NUNCA hardcodear rutas de assets directamente en widgets
+- NUNCA colocar assets fuera de `lib/shared/assets/`
+- NUNCA usar rutas relativas sin `PathAssets`
+
+## Estructura de Assets (MANDATORY)
+
+**DEBE** seguir esta estructura:
+
+```
+lib/shared/assets/
+├── fonts/
+│   ├── Poppins.ttf
+│   └── Poppins-Bold.ttf
+├── icons/
+│   ├── alert_icon.png
+│   ├── b2b_blue.png
+│   └── store.png
+└── images/
+    └── splash_generic.png
+```
+
+## Declaración en pubspec.yaml (MANDATORY)
+
+**DEBE** declarar assets en `pubspec.yaml`:
+
+```yaml
+flutter:
+  assets:
+    - lib/shared/assets/images/
+    - lib/shared/assets/icons/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: lib/shared/assets/fonts/Poppins.ttf
+        - asset: lib/shared/assets/fonts/Poppins-Bold.ttf
+          weight: 700
+```
+
+## PathAssets (MANDATORY)
+
+**DEBE** centralizar rutas de assets en `lib/core/constants/path_assets.dart`:
+
+```dart
+class PathAssets {
+  /// Path to icons
+  static const String alertIcon = 'lib/shared/assets/icons/alert_icon.png';
+  static const String b2bBlue = 'lib/shared/assets/icons/b2b_blue.png';
+  
+  /// Path to images
+  static const String splashGeneric = 'lib/shared/assets/images/splash_generic.png';
+}
+```
+
+## Uso de Assets en Widgets (MANDATORY)
+
+**DEBE** usar `PathAssets` con `Image.asset()`:
+
+```dart
+import 'package:b2b/core/constants/path_assets.dart';
+import 'package:b2b/shared/utils/responsive.dart';
+
+// Obtener instancia de Responsive
+final responsive = Responsive.of(context);
+
+// ✅ CORRECTO - Usar PathAssets con dimensiones responsive
+Image.asset(
+  PathAssets.b2bWhite,
+  width: responsive.dp(40),
+  height: responsive.dp(15),
+  fit: BoxFit.contain,
+)
+
+// ✅ CORRECTO - Con color para iconos
+Image.asset(
+  PathAssets.byCeluweb,
+  color: MyColors.secondaryColor,
+  width: responsive.dp(8),
+  height: responsive.dp(6),
+  fit: BoxFit.contain,
+)
+
+// ✅ CORRECTO - Con errorBuilder
+Image.asset(
+  PathAssets.store,
+  width: responsive.dp(20),
+  height: responsive.dp(20),
+  errorBuilder: (context, error, stackTrace) {
+    return const Icon(Icons.error);
+  },
+)
+```
+
+## Naming Conventions (MANDATORY)
+
+**DEBE** usar snake_case para nombres de archivos:
+
+```dart
+// ✅ CORRECTO - Nombres descriptivos en snake_case
+alert_icon.png
+b2b_blue.png
+
+
+// ❌ INCORRECTO - Nombres sin formato
+alertIcon.png
+emptyState.png
+```
+
+**DEBE** usar camelCase para constantes en `PathAssets`:
+
+```dart
+// ✅ CORRECTO - camelCase para constantes
+static const String alertIcon = 'lib/shared/assets/icons/alert_icon.png';
+static const String b2bBlue = 'lib/shared/assets/icons/b2b_blue.png';
+
+// ❌ INCORRECTO - snake_case en constantes
+static const String alert_icon = 'lib/shared/assets/icons/alert_icon.png';
+```
+
+## Fuentes (MANDATORY)
+
+**DEBE** declarar fuentes en `pubspec.yaml` y usar la clase `Fonts`:
+
+```yaml
+# En pubspec.yaml
+fonts:
+  - family: Poppins
+    fonts:
+      - asset: lib/shared/assets/fonts/Poppins.ttf
+      - asset: lib/shared/assets/fonts/Poppins-Bold.ttf
+        weight: 700
+```
+
+```dart
+// Usar Fonts class para fontFamily
+Text(
+  'Título',
+  style: TextStyles.dynamicTextStyle(
+    fontFamily: Fonts.poppins,
+    fontSize: responsive.fp(27),
+    isBold: true,
+  ),
+)
+```
+
+## PROHIBIDO
+
+```dart
+// ❌ Hardcodear rutas directamente
+Image.asset('lib/shared/assets/icons/store.png')
+
+// ❌ Usar rutas relativas sin PathAssets
+Image.asset('assets/icons/store.png')
+
+// ❌ Colocar assets fuera de lib/shared/assets/
+Image.asset('assets/store.png') // ❌ Fuera de estructura
+
+// ❌ No usar dimensiones responsive
+Image.asset(
+  PathAssets.store,
+  width: 100, // ❌ Hardcoded
+  height: 100, // ❌ Hardcoded
+)
+
+// ❌ Nombres de archivo incorrectos
+alertIcon.png // ❌ Debe ser alert_icon.png
+B2B-Blue.png  // ❌ Debe ser b2b_blue.png
+
+// ❌ No declarar assets en pubspec.yaml
+// Falta declaración en pubspec.yaml ❌
+```
+
+## CORRECTO
+
+```dart
+// ✅ Usar PathAssets
+Image.asset(
+  PathAssets.store,
+  width: responsive.dp(20),
+  height: responsive.dp(20),
+  fit: BoxFit.contain,
+)
+
+// ✅ Con color para iconos
+Image.asset(
+  PathAssets.byCeluweb,
+  color: MyColors.secondaryColor,
+  width: responsive.dp(8),
+  height: responsive.dp(6),
+)
+
+// ✅ Con errorBuilder
+Image.asset(
+  PathAssets.b2bWhite,
+  width: responsive.dp(40),
+  height: responsive.dp(15),
+  errorBuilder: (context, error, stackTrace) {
+    return const Icon(Icons.error);
+  },
+)
+
+// ✅ Agregar nuevo asset a PathAssets
+// En lib/core/constants/path_assets.dart
+class PathAssets {
+  static const String newIcon = 'lib/shared/assets/icons/new_icon.png';
+}
+
+// ✅ Declarar en pubspec.yaml
+flutter:
+  assets:
+    - lib/shared/assets/images/
+    - lib/shared/assets/icons/
+```
+
+---
